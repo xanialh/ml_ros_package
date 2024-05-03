@@ -1,2 +1,2 @@
-directory_path_input: "data/mapsWithoutCoords/rawMaps/office"
-directory_path_output: "data/mapsWithoutCoords/mapsSplitByIndex/office"
+directory_path_input: "data/maps_without_coords/raw_maps/office"
+directory_path_output: "data/maps_without_coords/maps_split_by_index/office"
