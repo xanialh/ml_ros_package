@@ -233,8 +233,6 @@ if criterion == 1:
     criterion = nn.CrossEntropyLoss()
 elif criterion == 2:
     criterion = nn.BCELoss()
-elif criterion == 3:
-    criterion = nn.NLLLoss()
 else:
     raise ValueError("Invalid criterion value for loss function")
 
@@ -250,7 +248,6 @@ elif optimizer == 5:
     optimizer = optim.Adagrad(model.parameters(), lr=learning_rate)
 else:
     raise ValueError("Invalid value for optimiser")
-
 
 matchingFiles = find_matching_files(file_path_input)
 
