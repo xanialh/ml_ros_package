@@ -32,6 +32,11 @@ num_epochs = config["num_epochs"]
 dict = config["dict"]
 lower_bound_threshold = config["lower_bound_threshold"]
 upper_bound_threshold = config["upper_bound_threshold"]
+learning_rate = config["learning_rate"]
+momentum = config["momentum"]
+betas = config["betas"]
+alpha = config["alpha"]
+rho = config["rho"]
 
 class SocialHeatMapFCN(nn.Module):
     def __init__(self):
@@ -222,16 +227,30 @@ transforms.ToTensor()
 
 model = SocialHeatMapFCN() # Instantiate the model
 
+accuracy = torchmetrics.Accuracy(task="multiclass",num_classes=num_classes)
+
 if criterion == 1:
     criterion = nn.CrossEntropyLoss()
 elif criterion == 2:
-    criterion = torchmetrics.Dice()
+    criterion = nn.BCELoss()
 elif criterion == 3:
-    criterion = torchmetrics.JaccardIndex()
-elif criterion == 4:
-    criterion = torchmetrics.HingeLoss()
+    criterion = nn.NLLLoss()
+else:
+    raise ValueError("Invalid criterion value for loss function")
 
-optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
+if optimizer == 1:
+    optimizer = optim.SGD(model.parameters(), lr=learning_rate, momentum=momentum)
+elif optimizer == 2:
+    optimizer = optim.Adam(model.parameters(), lr=learning_rate, betas=betas)
+elif optimizer == 3:
+    optimizer = optim.RMSprop(model.parameters(), lr=learning_rate, alpha=alpha)
+elif optimizer == 4:
+    optimizer = optim.Adadelta(model.parameters(), rho=rho)
+elif optimizer == 5:
+    optimizer = optim.Adagrad(model.parameters(), lr=learning_rate)
+else:
+    raise ValueError("Invalid value for optimiser")
+
 
 matchingFiles = find_matching_files(file_path_input)
 
