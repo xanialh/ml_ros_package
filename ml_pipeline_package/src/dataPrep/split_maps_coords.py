@@ -1,8 +1,17 @@
 import os
 import csv
+import yaml
 
-directory_path_output = "/home/danielhixson/ros/noetic/system/src/ML/ml/dataCollection/mapsWithCoords/MAPSSPLITBYINDEX"
-directory_path_input = "/home/danielhixson/ros/noetic/system/src/ML/ml/dataCollection/mapsWithCoords"
+# Load configuration
+try:
+  with open("config/config_split_maps_coords.yaml", "r") as f:
+    config = yaml.safe_load(f)
+except FileNotFoundError:
+  print("Error: Configuration file 'config.yaml' not found!")
+  # Handle the error or use default values
+
+directory_path_input = config["directory_path_input"]
+directory_path_output = config["directory_path_output"]
 
 txt_file_count = 0
 

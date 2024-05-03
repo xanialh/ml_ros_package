@@ -5,9 +5,19 @@ import datetime
 import numpy as np
 import os
 from std_msgs.msg import Bool
-from nav_msgs.msg import Odometry
+import yaml
 
-folder_path = "/home/danielhixson/ros/noetic/system/src/ML/ml/dataCollection/mapsWithCoords"
+# Load configuration
+try:
+  with open("config/config_record_maps.yaml", "r") as f:
+    config = yaml.safe_load(f)
+except FileNotFoundError:
+  print("Error: Configuration file 'config.yaml' not found!")
+  # Handle the error or use default values
+
+folder_path = config["folder_path"]
+ogm_topic = config["ogm_topic"]
+sgm_topic = config["sgm_topic"]
 
 #social grid map has 1 as first element
 #obstacle grid map has 0 as first element
@@ -22,8 +32,6 @@ class rosRecorder:
         self.recordingFlag = True
         self.ogmSub = None
         self.sgmSub = None
-        self.odom_x = None
-        self.odom_y = None
 
     def setRecordingFlag(self,value):
         self.recordingFlag = False
@@ -57,6 +65,7 @@ class rosRecorder:
     outer_start_index
     inner_start_index
     '''
+        
         layers_copy = msg.layers.copy()
         # Extract data from the 'social' layer
         social_heatmap_data = None
@@ -81,17 +90,7 @@ class rosRecorder:
                 column_index = d.size
             elif d.label == "row_index":
                 row_index = d.size
-        data_array = np.array(data.data)
-        positions = [float("nan"),float("nan")]
-
-        if self.odom_x is not None and self.odom_y is not None:
-            positions[0] = self.odom_x
-            positions[1] = self.odom_y
-
-        positions_array = np.array(positions)
-        print(positions_array) 
-
-        numpy_array = np.insert(data_array,0,positions_array)
+        numpy_array = np.array(data.data)
 
         arrayWithWidth = np.insert(numpy_array,0,float(row_index))
         arrayWithHeight = np.insert(arrayWithWidth ,0,float(column_index))
@@ -123,23 +122,11 @@ class rosRecorder:
     info.origin.orientation.w
     data
     '''
-
-
         data = msg.data
         column_index = msg.info.width
         row_index = msg.info.height
 
-        data_array = np.array(data)
-        
-        positions = [float("nan"),float("nan")]
-
-        if self.odom_x is not None and self.odom_y is not None:
-            positions[0] = self.odom_x
-            positions[1] = self.odom_y
-
-        positions_array = np.array(positions)
-
-        numpy_array = np.insert(data_array,0,positions_array)
+        numpy_array = np.array(data)
 
         arrayWithWidth = np.insert(numpy_array,0,float(column_index))
         arrayWithHeight = np.insert(arrayWithWidth ,0,float(row_index))
@@ -152,21 +139,17 @@ class rosRecorder:
 
         np.savetxt(appendFile, [final_array],fmt='%f',delimiter=",",newline='\n')
         print("O WROTE: " + str(sequence))
-
-    def coords_callback(self,msg):
-        self.odom_x = msg.pose.pose.position.x
-        self.odom_y = msg.pose.pose.position.y
-
     
     def record(self):
             self.file.close()
-            topics = ["/grid_map_visualization/obstacles", "/smf_move_base_mapper/social_grid_map","/pepper/odom_groundtruth"]
+            topics = [ogm_topic, sgm_topic]
 
             self.file = open(self.fileName,'a')
 
             self.ogmSub = rospy.Subscriber(topics[0], OccupancyGrid, self.o_gridmap_callback,callback_args=self.file)
             self.sgmSub = rospy.Subscriber(topics[1], GridMap, self.s_gridmap_callback,callback_args=self.file)
-            self.coords = rospy.Subscriber(topics[2], Odometry, self.coords_callback)
+
+
 
 class dataCollector:
     def __init__(self) -> None:
@@ -205,7 +188,6 @@ class dataCollector:
                     print("current recorder flag turned false")
                     self.currentRecorder = None  # Clear reference to stopped
 
-if __name__ == "__main__":
-    rospy.init_node("rosbagDataCollector")
-    fileMaker = dataCollector()
-    fileMaker.loop()
+rospy.init_node("gridMapCollector")
+fileMaker = dataCollector()
+fileMaker.loop()

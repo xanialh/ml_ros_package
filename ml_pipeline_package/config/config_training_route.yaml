@@ -1,0 +1,5 @@
+map: "office"
+num_waypoints: 1
+waypoint_topic: "/pedsim_visualizer/waypoints"
+goal_result_topic: "/smf_goto_action/result"
+starting_position: [[-5,19],[-20,14],[14,14]]

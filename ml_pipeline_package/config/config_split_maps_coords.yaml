@@ -1,0 +1,2 @@
+directory_path_input: "data/mapsWithCoords/rawMaps/office"
+directory_path_output: "data/mapsWithCoords/mapsSplitByIndex/office"

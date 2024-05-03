@@ -190,49 +190,48 @@ def addFilesToDataset(matching_files,dataset):
             print(f"Pairs for files with number {file_number}:")
             loadIntoDataset(pairs,dataset)
 
-def main():
-    # Define transformations
-    transform = transforms.Compose([
-    transforms.ToPILImage(),
-    transforms.Resize((128, 128), interpolation=transforms.InterpolationMode.NEAREST),
-    transforms.ToTensor()
+# Define transformations
+transform = transforms.Compose([
+transforms.ToPILImage(),
+transforms.Resize((128, 128), interpolation=transforms.InterpolationMode.NEAREST),
+transforms.ToTensor()
 ])
 
-    model = SocialHeatMapFCN() # Instantiate the model
+model = SocialHeatMapFCN() # Instantiate the model
 
-    criterion = nn.CrossEntropyLoss()
-    optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
+criterion = nn.CrossEntropyLoss()
+optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
 
-    matchingFiles = find_matching_files("/home/danielhixson/ros/noetic/system/src/ML/ml/dataCollection/maps/MAPS_DENSITY")
+matchingFiles = find_matching_files("/home/danielhixson/ros/noetic/system/src/ML/ml/dataCollection/maps/MAPS_DENSITY")
 
-    for file_number, files in matchingFiles.items():
-        if 'socialGridMap' in files and 'obstacleGridMap' in files:
-            newDataset = HMDataset(transform=transform)
-            sgmFilename = files['socialGridMap']
-            ogmFilename = files['obstacleGridMap']
-            pairs = loadFromTxt(sgmFilename, ogmFilename,)
-            print(f"file number: {file_number}")
-            loadIntoDataset(pairs,newDataset)
+for file_number, files in matchingFiles.items():
+    if 'socialGridMap' in files and 'obstacleGridMap' in files:
+        newDataset = HMDataset(transform=transform)
+        sgmFilename = files['socialGridMap']
+        ogmFilename = files['obstacleGridMap']
+        pairs = loadFromTxt(sgmFilename, ogmFilename,)
+        print(f"file number: {file_number}")
+        loadIntoDataset(pairs,newDataset)
 
-            batch_size = 32
-            newDataLoader = DataLoader(newDataset,batch_size=batch_size,shuffle=True)
+        batch_size = 32
+        newDataLoader = DataLoader(newDataset,batch_size=batch_size,shuffle=True)
 
-            num_epochs = 200
-            for epoch in range(num_epochs):
-            # Iterate over the dataset
-                for inputs, labels in newDataLoader:
-                # Forward pass
-                    outputs = model(inputs)
-                # Compute the loss
-                    loss = criterion(outputs, labels)
-                    print(loss.item())
-                # Backward pass and optimization
-                    optimizer.zero_grad()
-                    loss.backward()
-                    optimizer.step()
+        num_epochs = 200
+        for epoch in range(num_epochs):
+        # Iterate over the dataset
+            for inputs, labels in newDataLoader:
+            # Forward pass
+                outputs = model(inputs)
+            # Compute the loss
+                loss = criterion(outputs, labels)
+                print(loss.item())
+            # Backward pass and optimization
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
 
-            del newDataset
-            del newDataLoader
+        del newDataset
+        del newDataLoader
 
 if __name__ == "__main__":
     main()

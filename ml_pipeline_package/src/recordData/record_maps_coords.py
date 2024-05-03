@@ -6,8 +6,20 @@ import numpy as np
 import os
 from std_msgs.msg import Bool
 from nav_msgs.msg import Odometry
+import yaml
 
-folder_path = "/home/danielhixson/ros/noetic/system/src/ML/ml/dataCollection/mapsWithCoords"
+# Load configuration
+try:
+  with open("config/config_record_maps_coords.yaml", "r") as f:
+    config = yaml.safe_load(f)
+except FileNotFoundError:
+  print("Error: Configuration file 'config.yaml' not found!")
+  # Handle the error or use default values
+
+folder_path = config["folder_path"]
+ogm_topic = config["ogm_topic"]
+sgm_topic = config["sgm_topic"]
+odom_topic = config["odom_topic"]
 
 #social grid map has 1 as first element
 #obstacle grid map has 0 as first element
@@ -160,7 +172,7 @@ class rosRecorder:
     
     def record(self):
             self.file.close()
-            topics = ["/grid_map_visualization/obstacles", "/smf_move_base_mapper/social_grid_map","/pepper/odom_groundtruth"]
+            topics = [ogm_topic, sgm_topic,odom_topic]
 
             self.file = open(self.fileName,'a')
 

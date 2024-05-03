@@ -1,0 +1,3 @@
+folder_path: "data/mapsWithoutCoords/rawMaps/office"
+ogm_topic: "/grid_map_visualization/obstacles"
+sgm_topic: "/smf_move_base_mapper/social_grid_map"

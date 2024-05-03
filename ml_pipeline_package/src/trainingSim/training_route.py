@@ -9,12 +9,28 @@ from smf_move_base_msgs.msg import Goto2DActionResult
 from rosgraph_msgs.msg import Clock
 from visualization_msgs.msg import MarkerArray
 from std_msgs.msg import Bool
+import yaml
+
+# Load configuration
+try:
+  with open("config/config_training_route.yaml", "r") as f:
+    config = yaml.safe_load(f)
+except FileNotFoundError:
+  print("Error: Configuration file 'config.yaml' not found!")
+  # Handle the error or use default values
+
+map = config["map"]
+num_waypoints = config["num_waypoints"]
+waypoint_topic = config["waypoint_topic"]
+goal_result_topic = config["goal_result_topic"]
+starting_position = config["starting_position"]
+start_position = random.choice(starting_position)
 
 PROCESS_GENERATE_RUNNING = True
 
-version_choice = "office"
-start_position = [-19.78, 21.57]
-goal_position = [-19.78, 21.57]
+version_choice = map
+start_position = start_position
+goal_position = start_position
 waypoints = []
 
 class ProcessListener(roslaunch.pmon.ProcessListener):
@@ -80,13 +96,13 @@ def waypoint_callback(msg):
     waypoint_listener.unregister()
 
 waypoint_listener = rospy.Subscriber(
-    "/pedsim_visualizer/waypoints",
+    waypoint_topic,
     MarkerArray,
     waypoint_callback
 )
 
 goal_listener = rospy.Subscriber(
-    "/smf_goto_action/result",
+    goal_result_topic,
     Goto2DActionResult,
     goal_reached_callback,
     queue_size=1,
@@ -110,7 +126,7 @@ while (flag):
     msgStart = Bool()
     msgStart.data = True
     bagRecordPub.publish(msgStart)
-    rospy.loginfo("Bag is recording")
+    rospy.loginfo("Recording grid maps")
     current_time_msg = rospy.wait_for_message("clock", Clock)
     current_time = current_time_msg.clock.secs
     max_test_time = rospy.get_param("/metrics_recorder_node/max_test_time")
