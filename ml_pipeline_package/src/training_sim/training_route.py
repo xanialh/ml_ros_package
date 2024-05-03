@@ -135,8 +135,8 @@ while (flag):
         if len(waypoints) == 0:
             flag = False
             break
-        elif len(waypoints) > 1:
-            waypoints = subListWaypoints(waypoints,1)
+        elif len(waypoints) > num_waypoints:
+            waypoints = subListWaypoints(waypoints,num_waypoints)
         rospy.set_param("/metrics_recorder_node/max_test_time",400+current_time)
         new_goal = waypoints.pop(0)
         rospy.set_param("waypointList",waypoints)

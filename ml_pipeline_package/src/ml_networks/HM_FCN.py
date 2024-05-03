@@ -9,6 +9,29 @@ import torchvision.transforms as transforms
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
 import os
+import yaml
+import torchmetrics
+
+
+# Load configuration
+try:
+  with open("config/config_HM_FCN.yaml", "r") as f:
+    config = yaml.safe_load(f)
+except FileNotFoundError:
+  print("Error: Configuration file 'config.yaml' not found!")
+  # Handle the error or use default values
+
+file_path_input = config["file_path_input"]
+file_path_output = config["file_path_output"]
+training_image_size = config["training_image_size"]
+criterion = config["criterion"]
+optimizer = config["optimiser"]
+num_classes = config["num_classes"]
+batch_size = config["batch_size"]
+num_epochs = config["num_epochs"]
+dict = config["dict"]
+lower_bound_threshold = config["lower_bound_threshold"]
+upper_bound_threshold = config["upper_bound_threshold"]
 
 class SocialHeatMapFCN(nn.Module):
     def __init__(self):
@@ -199,10 +222,18 @@ transforms.ToTensor()
 
 model = SocialHeatMapFCN() # Instantiate the model
 
-criterion = nn.CrossEntropyLoss()
+if criterion == 1:
+    criterion = nn.CrossEntropyLoss()
+elif criterion == 2:
+    criterion = torchmetrics.Dice()
+elif criterion == 3:
+    criterion = torchmetrics.JaccardIndex()
+elif criterion == 4:
+    criterion = torchmetrics.HingeLoss()
+
 optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
 
-matchingFiles = find_matching_files("/home/danielhixson/ros/noetic/system/src/ML/ml/dataCollection/maps/MAPS_DENSITY")
+matchingFiles = find_matching_files(file_path_input)
 
 for file_number, files in matchingFiles.items():
     if 'socialGridMap' in files and 'obstacleGridMap' in files:
@@ -213,10 +244,8 @@ for file_number, files in matchingFiles.items():
         print(f"file number: {file_number}")
         loadIntoDataset(pairs,newDataset)
 
-        batch_size = 32
         newDataLoader = DataLoader(newDataset,batch_size=batch_size,shuffle=True)
 
-        num_epochs = 200
         for epoch in range(num_epochs):
         # Iterate over the dataset
             for inputs, labels in newDataLoader:
@@ -233,5 +262,3 @@ for file_number, files in matchingFiles.items():
         del newDataset
         del newDataLoader
 
-if __name__ == "__main__":
-    main()
