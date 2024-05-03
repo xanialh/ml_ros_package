@@ -12,7 +12,6 @@ import os
 import yaml
 import torchmetrics
 
-
 # Load configuration
 try:
   with open("config/config_HM_FCN.yaml", "r") as f:

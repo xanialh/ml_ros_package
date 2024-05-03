@@ -9,6 +9,33 @@ import torchvision.transforms as transforms
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
 import os
+import yaml
+import torchmetrics
+
+# Load configuration
+try:
+  with open("config/config_HM_FCNv2.yaml", "r") as f:
+    config = yaml.safe_load(f)
+except FileNotFoundError:
+  print("Error: Configuration file 'config.yaml' not found!")
+  # Handle the error or use default values
+
+file_path_input = config["file_path_input"]
+file_path_output = config["file_path_output"]
+training_image_size = config["training_image_size"]
+criterion = config["criterion"]
+optimizer = config["optimiser"]
+num_classes = config["num_classes"]
+batch_size = config["batch_size"]
+num_epochs = config["num_epochs"]
+dict = config["dict"]
+lower_bound_threshold = config["lower_bound_threshold"]
+upper_bound_threshold = config["upper_bound_threshold"]
+learning_rate = config["learning_rate"]
+momentum = config["momentum"]
+betas = config["betas"]
+alpha = config["alpha"]
+rho = config["rho"]
 
 class SocialHeatMapFCN(nn.Module):
     def __init__(self):
@@ -49,8 +76,8 @@ class SocialHeatMapFCN(nn.Module):
         # Forward pass through the decoder
         x = self.decoder(x)
 
-        # Apply softmax to get probabilities for each social activity level
         x = self.softmax(x)
+        
         return x
     
 class HMDataset(Dataset):
@@ -115,25 +142,20 @@ def socialMapToLabels(socialGridMap):
     return socialGridMap
 
 def one_hot_encode(data_tensor):
-  # Ensure the input tensor has the expected number of dimensions (2 for height and width)
   if data_tensor.dim() != 2:
     raise ValueError("Input tensor should have 2 dimensions (height and width).")
-
-  # Define the number of channels (one for each class)
+  
   num_channels = 3
 
-  # Create an empty tensor for the one-hot encoded representation
   one_hot = torch.zeros((num_channels, data_tensor.shape[0], data_tensor.shape[1]))
 
-  # Use conditional statements to fill each channel with 1.0 based on the class label
   one_hot[0] = torch.where(data_tensor == 0, 1.0, 0.0)  # Channel 0: Low activity
   one_hot[1] = torch.where(data_tensor == 1, 1.0, 0.0)  # Channel 1: Medium activity
   one_hot[2] = torch.where(data_tensor == 2, 1.0, 0.0)  # Channel 2: High activity
 
   return one_hot
 
-
-def loadFromTxt(sgmFilename,ogmFilename,density=False):
+def loadFromTxt(sgmFilename,ogmFilename,density):
     pairs = []
     with open(sgmFilename,"r") as sgmFile, open(ogmFilename,"r") as ogmFile:
 
@@ -147,41 +169,6 @@ def loadFromTxt(sgmFilename,ogmFilename,density=False):
                 if line1[1] == line2[1]:
                     pairs.append((line1,line2))
                     break     
-
-    if density == True:
-        largest_header_pair = max(pairs, key=lambda p: float(p[0][1]))
-        largest_social_grid, largest_obstacle_grid = largest_header_pair
-        largest_height, largest_width = int(float(largest_social_grid[2])), int(float(largest_social_grid[3]))
-        largest_header = float(largest_social_grid[1])
-        np_social_grid = np.array(largest_social_grid[4:])
-        reshape_final_social_grid = np_social_grid.reshape((largest_height, largest_width))
-        reshape_final_social_grid = reshape_final_social_grid.astype(float)
-        reshape_final_social_grid = np.nan_to_num(reshape_final_social_grid,nan=0)
-
-        test_ogm = np.array(largest_obstacle_grid[4:])
-        test_ogm = test_ogm.reshape((largest_height, largest_width))
-        test_ogm = test_ogm.astype(float)
-        show_array_as_image(test_ogm)
-        
-        for pair in pairs:
-            if pair[0][1] != largest_header:
-                socialGridMap = np.array(pair[0][4:])
-                height,width = int(float(pair[0][2])),int(float(pair[0][3]))
-                reshape_socialGridMap = socialGridMap.reshape(height,width)
-                reshape_socialGridMap = reshape_socialGridMap.astype(float)
-                padded_array = pad_array_to_shape(reshape_socialGridMap,(largest_height, largest_width),0)
-                padded_array = padded_array.astype(float)
-                padded_array = np.nan_to_num(padded_array,nan=0)
-                #show_array_as_image(padded_array)
-                reshape_final_social_grid = np.add(reshape_final_social_grid,padded_array)
-
-        show_array_as_image(reshape_final_social_grid)
-        reshape_final_social_grid = np.ravel(reshape_final_social_grid)
-        sgmFront = np.array([1,largest_header,largest_height,largest_width])
-        sgm = np.concatenate((sgmFront,reshape_final_social_grid))
-        sgmList = sgm.tolist()
-
-        pairs = [(sgmList,largest_obstacle_grid)]
     
     return pairs
 
@@ -232,53 +219,67 @@ def addFilesToDataset(matching_files,dataset):
         if 'socialGridMap' in files and 'obstacleGridMap' in files:
             sgmFilename = files['socialGridMap']
             ogmFilename = files['obstacleGridMap']
-            pairs = loadFromTxt(sgmFilename, ogmFilename,False)
+            pairs = loadFromTxt(sgmFilename, ogmFilename)
             print(f"Pairs for files with number {file_number}:")
             loadIntoDataset(pairs,dataset)
 
-def main():
-    # Define transformations
-    transform = transforms.Compose([
-    transforms.ToPILImage(),
-    transforms.Resize((128, 128), interpolation=transforms.InterpolationMode.NEAREST),
-    transforms.ToTensor()
+# Define transformations
+transform = transforms.Compose([
+transforms.ToPILImage(),
+transforms.Resize((training_image_size[0], training_image_size[1]), interpolation=transforms.InterpolationMode.NEAREST),
+transforms.ToTensor()
 ])
 
-    model = SocialHeatMapFCN() # Instantiate the model
+model = SocialHeatMapFCN() # Instantiate the model
 
+accuracy = torchmetrics.Accuracy(task="multiclass",num_classes=num_classes)
+
+if criterion == 1:
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
+elif criterion == 2:
+    criterion = nn.BCELoss()
+else:
+    raise ValueError("Invalid criterion value for loss function")
 
-    matchingFiles = find_matching_files("/home/danielhixson/ros/noetic/system/src/ML/ml/dataCollection/maps/MAPSSPLITBYINDEX")
+if optimizer == 1:
+    optimizer = optim.SGD(model.parameters(), lr=learning_rate, momentum=momentum)
+elif optimizer == 2:
+    optimizer = optim.Adam(model.parameters(), lr=learning_rate, betas=betas)
+elif optimizer == 3:
+    optimizer = optim.RMSprop(model.parameters(), lr=learning_rate, alpha=alpha)
+elif optimizer == 4:
+    optimizer = optim.Adadelta(model.parameters(), rho=rho)
+elif optimizer == 5:
+    optimizer = optim.Adagrad(model.parameters(), lr=learning_rate)
+else:
+    raise ValueError("Invalid value for optimiser")
 
-    for file_number, files in matchingFiles.items():
-        if 'socialGridMap' in files and 'obstacleGridMap' in files:
-            newDataset = HMDataset(transform=transform)
-            sgmFilename = files['socialGridMap']
-            ogmFilename = files['obstacleGridMap']
-            pairs = loadFromTxt(sgmFilename, ogmFilename,)
-            print(f"file number: {file_number}")
-            loadIntoDataset(pairs,newDataset)
+matchingFiles = find_matching_files(file_path_input)
 
-            batch_size = 32
-            newDataLoader = DataLoader(newDataset,batch_size=batch_size,shuffle=True)
+for file_number, files in matchingFiles.items():
+    if 'socialGridMap' in files and 'obstacleGridMap' in files:
+        newDataset = HMDataset(transform=transform)
+        sgmFilename = files['socialGridMap']
+        ogmFilename = files['obstacleGridMap']
+        pairs = loadFromTxt(sgmFilename, ogmFilename,)
+        print(f"file number: {file_number}")
+        loadIntoDataset(pairs,newDataset)
 
-            num_epochs = 200
-            for epoch in range(num_epochs):
-            # Iterate over the dataset
-                for inputs, labels in newDataLoader:
-                # Forward pass
-                    outputs = model(inputs)
-                # Compute the loss
-                    loss = criterion(outputs, labels)
-                    print(loss.item())
-                # Backward pass and optimization
-                    optimizer.zero_grad()
-                    loss.backward()
-                    optimizer.step()
+        newDataLoader = DataLoader(newDataset,batch_size=batch_size,shuffle=True)
 
-            del newDataset
-            del newDataLoader
+        for epoch in range(num_epochs):
+        # Iterate over the dataset
+            for inputs, labels in newDataLoader:
+            # Forward pass
+                outputs = model(inputs)
+            # Compute the loss
+                loss = criterion(outputs, labels)
+                print(loss.item())
+            # Backward pass and optimization
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
 
-if __name__ == "__main__":
-    main()
+        del newDataset
+        del newDataLoader
+

@@ -1,0 +1,17 @@
+file_path_input: "data/maps_without_coords/maps_SDHM_cropped/office"
+file_path_output: "data/trained_models/office"
+training_image_size: [128,128]
+criterion: 1
+optimiser: 1
+num_classes: 3
+batch_size: 32
+num_epochs: 200
+dict: 1
+lower_bound_threshold: 100
+upper_bound_threshold: 700
+learning_rate: 0.001
+momentum: 0.9
+betas: [0.9, 0.999]
+alpha: 0.9
+rho: 0.9
+
