@@ -216,7 +216,7 @@ def addFilesToDataset(matching_files,dataset):
 # Define transformations
 transform = transforms.Compose([
 transforms.ToPILImage(),
-transforms.Resize((128, 128), interpolation=transforms.InterpolationMode.NEAREST),
+transforms.Resize((training_image_size[0], training_image_size[1]), interpolation=transforms.InterpolationMode.NEAREST),
 transforms.ToTensor()
 ])
 

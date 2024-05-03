@@ -9,3 +9,6 @@ num_epochs: 200
 dict: 1
 lower_bound_threshold: 100
 upper_bound_threshold: 700
+learning_rate:
+momentum:
+
