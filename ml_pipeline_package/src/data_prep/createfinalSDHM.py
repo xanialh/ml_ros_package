@@ -113,8 +113,8 @@ def addFilesToDataset(matching_files, folderPathOutput):
             os.makedirs(folder_path, exist_ok=True)  # Handles existing folders
 
             # Construct file paths with folder path variable
-            social_file_path = os.path.join(folder_path, "social_data.txt")
-            obstacle_file_path = os.path.join(folder_path, "obstacle_data.txt")
+            social_file_path = os.path.join(folder_path, sgmFilename + "_final_social_data.txt")
+            obstacle_file_path = os.path.join(folder_path, ogmFilename + "_final_obstacle_data.txt")
 
             # Open files in append mode
             with open(social_file_path, "a") as social_file:

@@ -13,7 +13,7 @@ import yaml
 
 # Load configuration
 try:
-  with open("config/config_training_route.yaml", "r") as f:
+  with open("/home/danielhixson/socNavProject/ml_ros_package/ml_pipeline_package/config/config_training_route.yaml", "r") as f:
     config = yaml.safe_load(f)
 except FileNotFoundError:
   print("Error: Configuration file 'config.yaml' not found!")

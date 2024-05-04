@@ -51,8 +51,12 @@ class SocialHeatMapCombined(nn.Module):
             nn.ReLU(inplace=True),
             nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, padding=1),
             nn.ReLU(inplace=True),
-            nn.ConvTranspose2d(in_channels=64, out_channels=3, kernel_size=4, stride=2, padding=1)
+            nn.ConvTranspose2d(in_channels=64, out_channels=3, kernel_size=4, stride=2, padding=1),
+            nn.ReLU(inplace=True)
         )
+
+        self.softmax = nn.Softmax(dim=1)
+        
 
     def forward(self, robot_position, obstacle_grid_map):
         # Encode robot position
@@ -72,6 +76,8 @@ class SocialHeatMapCombined(nn.Module):
 
         # Forward pass through the decoder with three channels for social heat map
         social_heatmap = self.decoder(encoded_features)
+
+        social_heatmap = self.softmax(social_heatmap)
 
         return social_heatmap
 

@@ -62,12 +62,11 @@ class SocialHeatMapFCN(nn.Module):
             nn.ReLU(inplace=True),
             nn.Conv2d(in_channels=64, out_channels=32, kernel_size=3, padding=1),  # Reduce to 32 filters before final layer
             nn.ReLU(inplace=True),
-            nn.ConvTranspose2d(in_channels=32, out_channels=3, kernel_size=4, stride=2, padding=1)
+            nn.ConvTranspose2d(in_channels=32, out_channels=3, kernel_size=4, stride=2, padding=1),
+            nn.ReLU(inplace=True)
         )
 
         self.softmax = nn.Softmax(dim=1)
-
-        #MAYBE ACTIVATION FUNCTION?
         
     def forward(self, x):
         # Forward pass through the encoder
@@ -282,4 +281,3 @@ for file_number, files in matchingFiles.items():
 
         del newDataset
         del newDataLoader
-
