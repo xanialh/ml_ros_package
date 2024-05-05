@@ -124,8 +124,8 @@ class HMDataset(Dataset):
         return self.labels
 
 def socialMapToLabels(socialGridMap):
-    low_bound = 0.5
-    high_bound = 30
+    low_bound = 0.2
+    high_bound = 0.4
 
     length = len(socialGridMap)
 
@@ -154,7 +154,7 @@ def one_hot_encode(data_tensor):
 
   return one_hot
 
-def loadFromTxt(sgmFilename,ogmFilename,density):
+def loadFromTxt(sgmFilename,ogmFilename):
     pairs = []
     with open(sgmFilename,"r") as sgmFile, open(ogmFilename,"r") as ogmFile:
 
@@ -255,29 +255,41 @@ else:
 
 matchingFiles = find_matching_files(file_path_input)
 
+tolerance = 0.00000001  # Threshold for loss function change (adjust as needed)
+prev_loss = float('inf')  # Initialize with a high value
+
+accuracy_metric = torchmetrics.Accuracy(task="multiclass",num_classes=3)
+
 for file_number, files in matchingFiles.items():
     if 'socialGridMap' in files and 'obstacleGridMap' in files:
         newDataset = HMDataset(transform=transform)
         sgmFilename = files['socialGridMap']
         ogmFilename = files['obstacleGridMap']
-        pairs = loadFromTxt(sgmFilename, ogmFilename,)
+        pairs = loadFromTxt(sgmFilename, ogmFilename)
         print(f"file number: {file_number}")
-        loadIntoDataset(pairs,newDataset)
+        loadIntoDataset(pairs, newDataset)
 
-        newDataLoader = DataLoader(newDataset,batch_size=batch_size,shuffle=True)
+        newDataLoader = DataLoader(newDataset, batch_size=batch_size, shuffle=True)
 
         for epoch in range(num_epochs):
-        # Iterate over the dataset
             for inputs, labels in newDataLoader:
-            # Forward pass
+                # Forward pass
                 outputs = model(inputs)
-            # Compute the loss
+
+                # Compute the loss
                 loss = criterion(outputs, labels)
                 print(loss.item())
-            # Backward pass and optimization
+
+                # Backward pass and optimization
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
 
+                accuracy.update(outputs,labels)
+                print(accuracy)
+ 
         del newDataset
         del newDataLoader
+
+accuracy = accuracy_metric.compute()
+print(f"Evaluation Accuracy after processing file {file_number}: {accuracy}")

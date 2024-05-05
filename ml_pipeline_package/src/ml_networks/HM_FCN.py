@@ -148,7 +148,7 @@ def one_hot_encode(data_tensor):
 
   return one_hot
 
-def loadFromTxt(sgmFilename,ogmFilename,density):
+def loadFromTxt(sgmFilename,ogmFilename):
     pairs = []
     with open(sgmFilename,"r") as sgmFile, open(ogmFilename,"r") as ogmFile:
 
