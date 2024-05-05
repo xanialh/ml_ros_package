@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 import os
 import yaml
 import torchmetrics
+import time
 
 # Load configuration
 try:
@@ -63,7 +64,6 @@ class SocialHeatMapFCN(nn.Module):
             nn.Conv2d(in_channels=64, out_channels=32, kernel_size=3, padding=1),  # Reduce to 32 filters before final layer
             nn.ReLU(inplace=True),
             nn.ConvTranspose2d(in_channels=32, out_channels=3, kernel_size=4, stride=2, padding=1),
-            nn.ReLU(inplace=True)
         )
 
         self.softmax = nn.Softmax(dim=1)
@@ -231,7 +231,12 @@ transforms.ToTensor()
 
 model = SocialHeatMapFCN() # Instantiate the model
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+model = SocialHeatMapFCN().to(device)
+
 accuracy = torchmetrics.Accuracy(task="multiclass",num_classes=num_classes)
+accuracy = accuracy.to(device)
 
 if criterion == 1:
     criterion = nn.CrossEntropyLoss()
@@ -255,41 +260,56 @@ else:
 
 matchingFiles = find_matching_files(file_path_input)
 
-tolerance = 0.00000001  # Threshold for loss function change (adjust as needed)
+tolerance = 0.0000000000000000001  # Threshold for loss function change (adjust as needed)
 prev_loss = float('inf')  # Initialize with a high value
-
-accuracy_metric = torchmetrics.Accuracy(task="multiclass",num_classes=3)
+plateau_tolerance = 25
 
 for file_number, files in matchingFiles.items():
+    plateau_count = 0
     if 'socialGridMap' in files and 'obstacleGridMap' in files:
         newDataset = HMDataset(transform=transform)
         sgmFilename = files['socialGridMap']
         ogmFilename = files['obstacleGridMap']
-        pairs = loadFromTxt(sgmFilename, ogmFilename)
+        pairs = loadFromTxt(sgmFilename, ogmFilename,)
         print(f"file number: {file_number}")
-        loadIntoDataset(pairs, newDataset)
+        loadIntoDataset(pairs,newDataset)
 
-        newDataLoader = DataLoader(newDataset, batch_size=batch_size, shuffle=True)
+        newDataLoader = DataLoader(newDataset,batch_size=batch_size,shuffle=True)
+
+        stop = False
 
         for epoch in range(num_epochs):
-            for inputs, labels in newDataLoader:
+        # Iterate over the dataset
+            if stop != True:
+                for inputs, labels in newDataLoader:
+                    inputs = inputs.to(device)
+                    labels = labels.to(device)
                 # Forward pass
-                outputs = model(inputs)
-
+                    outputs = model(inputs)
                 # Compute the loss
-                loss = criterion(outputs, labels)
-                print(loss.item())
+                    loss = criterion(outputs, labels)
+                    print(loss.item())
 
+                    if abs(prev_loss - loss.item()) > tolerance:
+                        prev_loss = loss.item()  # Update previous loss
+                        plateau_count = 0  # Reset plateau counter if improvement detected
+                    else:
+                        plateau_count += 1  # Increment counter if loss plateaus
+                    # Move to next file if plateau_tolerance is reached
+                    if plateau_count >= plateau_tolerance:
+                        print(f"Loss plateaued for {plateau_tolerance} epochs. Moving to next file.")
+                        stop = True
                 # Backward pass and optimization
-                optimizer.zero_grad()
-                loss.backward()
-                optimizer.step()
+                    optimizer.zero_grad()
+                    loss.backward()
+                    optimizer.step()
 
-                accuracy.update(outputs,labels)
-                print(accuracy)
- 
+                    accuracy.update(outputs,labels)
+
         del newDataset
         del newDataLoader
 
-accuracy = accuracy_metric.compute()
-print(f"Evaluation Accuracy after processing file {file_number}: {accuracy}")
+time.sleep(5)
+
+accuracy = accuracy.compute()
+print(f"Evaluation Accuracy: {accuracy}")
