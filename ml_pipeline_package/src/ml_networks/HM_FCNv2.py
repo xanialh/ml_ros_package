@@ -313,3 +313,4 @@ time.sleep(5)
 
 accuracy = accuracy.compute()
 print(f"Evaluation Accuracy: {accuracy}")
+torch.save(model.state_dict(), file_path_output + "my_model.pt")
