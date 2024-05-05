@@ -10,6 +10,7 @@ from HM_FCNv2 import SocialHeatMapFCN
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import cv2
 
 # Load configuration
 try:
@@ -56,10 +57,12 @@ data
 
     numpy_array = np.array(data,dtype=np.float32)
     numpy_array = numpy_array.reshape(row_index,column_index)
-    image_tensor = torch.from_numpy(numpy_array)
+    # Resize to 128x128 using OpenCV (adjust interpolation method if needed)
+    resized_array = cv2.resize(numpy_array, (128, 128), interpolation=cv2.INTER_AREA)
+    image_tensor = torch.from_numpy(resized_array)
 
     output = model(image_tensor.unsqueeze(0))
-    print(output)
+    print(output.size())
 
 rospy.init_node("mlNetwork")
 ogmSub = rospy.Subscriber(ogm_topic, OccupancyGrid, o_gridmap_callback,callback_args=model)
