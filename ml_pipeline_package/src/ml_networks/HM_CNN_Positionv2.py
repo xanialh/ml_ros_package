@@ -15,7 +15,7 @@ import time
 
 # Load configuration
 try:
-  with open("config/config_HM_CNN_Positionv2.yaml", "r") as f:
+  with open("config/config_HM_CNN_Position.yaml", "r") as f:
     config = yaml.safe_load(f)
 except FileNotFoundError:
   print("Error: Configuration file 'config.yaml' not found!")
