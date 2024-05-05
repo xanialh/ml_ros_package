@@ -222,95 +222,97 @@ def addFilesToDataset(matching_files,dataset):
             print(f"Pairs for files with number {file_number}:")
             loadIntoDataset(pairs,dataset)
 
-# Define transformations
-transform = transforms.Compose([
-transforms.ToPILImage(),
-transforms.Resize((training_image_size[0], training_image_size[1]), interpolation=transforms.InterpolationMode.NEAREST),
-transforms.ToTensor()
-])
+if __name__ == "__main__":
 
-model = SocialHeatMapFCN() # Instantiate the model
+    # Define transformations
+    transform = transforms.Compose([
+    transforms.ToPILImage(),
+    transforms.Resize((training_image_size[0], training_image_size[1]), interpolation=transforms.InterpolationMode.NEAREST),
+    transforms.ToTensor()
+    ])
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = SocialHeatMapFCN() # Instantiate the model
 
-model = SocialHeatMapFCN().to(device)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-accuracy = torchmetrics.Accuracy(task="multiclass",num_classes=num_classes)
-accuracy = accuracy.to(device)
+    model = SocialHeatMapFCN().to(device)
 
-if criterion == 1:
-    criterion = nn.CrossEntropyLoss()
-elif criterion == 2:
-    criterion = nn.BCELoss()
-else:
-    raise ValueError("Invalid criterion value for loss function")
+    accuracy = torchmetrics.Accuracy(task="multiclass",num_classes=num_classes)
+    accuracy = accuracy.to(device)
 
-if optimizer == 1:
-    optimizer = optim.SGD(model.parameters(), lr=learning_rate, momentum=momentum)
-elif optimizer == 2:
-    optimizer = optim.Adam(model.parameters(), lr=learning_rate, betas=betas)
-elif optimizer == 3:
-    optimizer = optim.RMSprop(model.parameters(), lr=learning_rate, alpha=alpha)
-elif optimizer == 4:
-    optimizer = optim.Adadelta(model.parameters(), rho=rho)
-elif optimizer == 5:
-    optimizer = optim.Adagrad(model.parameters(), lr=learning_rate)
-else:
-    raise ValueError("Invalid value for optimiser")
+    if criterion == 1:
+        criterion = nn.CrossEntropyLoss()
+    elif criterion == 2:
+        criterion = nn.BCELoss()
+    else:
+        raise ValueError("Invalid criterion value for loss function")
 
-matchingFiles = find_matching_files(file_path_input)
+    if optimizer == 1:
+        optimizer = optim.SGD(model.parameters(), lr=learning_rate, momentum=momentum)
+    elif optimizer == 2:
+        optimizer = optim.Adam(model.parameters(), lr=learning_rate, betas=betas)
+    elif optimizer == 3:
+        optimizer = optim.RMSprop(model.parameters(), lr=learning_rate, alpha=alpha)
+    elif optimizer == 4:
+        optimizer = optim.Adadelta(model.parameters(), rho=rho)
+    elif optimizer == 5:
+        optimizer = optim.Adagrad(model.parameters(), lr=learning_rate)
+    else:
+        raise ValueError("Invalid value for optimiser")
 
-tolerance = 0.0000000000000000001  # Threshold for loss function change (adjust as needed)
-prev_loss = float('inf')  # Initialize with a high value
-plateau_tolerance = 25
+    matchingFiles = find_matching_files(file_path_input)
 
-for file_number, files in matchingFiles.items():
-    plateau_count = 0
-    if 'socialGridMap' in files and 'obstacleGridMap' in files:
-        newDataset = HMDataset(transform=transform)
-        sgmFilename = files['socialGridMap']
-        ogmFilename = files['obstacleGridMap']
-        pairs = loadFromTxt(sgmFilename, ogmFilename,)
-        print(f"file number: {file_number}")
-        loadIntoDataset(pairs,newDataset)
+    tolerance = 0.0000000000000000001  # Threshold for loss function change (adjust as needed)
+    prev_loss = float('inf')  # Initialize with a high value
+    plateau_tolerance = 25
 
-        newDataLoader = DataLoader(newDataset,batch_size=batch_size,shuffle=True)
+    for file_number, files in matchingFiles.items():
+        plateau_count = 0
+        if 'socialGridMap' in files and 'obstacleGridMap' in files:
+            newDataset = HMDataset(transform=transform)
+            sgmFilename = files['socialGridMap']
+            ogmFilename = files['obstacleGridMap']
+            pairs = loadFromTxt(sgmFilename, ogmFilename,)
+            print(f"file number: {file_number}")
+            loadIntoDataset(pairs,newDataset)
 
-        stop = False
+            newDataLoader = DataLoader(newDataset,batch_size=batch_size,shuffle=True)
 
-        for epoch in range(num_epochs):
-        # Iterate over the dataset
-            if stop != True:
-                for inputs, labels in newDataLoader:
-                    inputs = inputs.to(device)
-                    labels = labels.to(device)
-                # Forward pass
-                    outputs = model(inputs)
-                # Compute the loss
-                    loss = criterion(outputs, labels)
-                    print(loss.item())
+            stop = False
 
-                    if abs(prev_loss - loss.item()) > tolerance:
-                        prev_loss = loss.item()  # Update previous loss
-                        plateau_count = 0  # Reset plateau counter if improvement detected
-                    else:
-                        plateau_count += 1  # Increment counter if loss plateaus
-                    # Move to next file if plateau_tolerance is reached
-                    if plateau_count >= plateau_tolerance:
-                        print(f"Loss plateaued for {plateau_tolerance} epochs. Moving to next file.")
-                        stop = True
-                # Backward pass and optimization
-                    optimizer.zero_grad()
-                    loss.backward()
-                    optimizer.step()
+            for epoch in range(num_epochs):
+            # Iterate over the dataset
+                if stop != True:
+                    for inputs, labels in newDataLoader:
+                        inputs = inputs.to(device)
+                        labels = labels.to(device)
+                    # Forward pass
+                        outputs = model(inputs)
+                    # Compute the loss
+                        loss = criterion(outputs, labels)
+                        print(loss.item())
 
-                    accuracy.update(outputs,labels)
+                        if abs(prev_loss - loss.item()) > tolerance:
+                            prev_loss = loss.item()  # Update previous loss
+                            plateau_count = 0  # Reset plateau counter if improvement detected
+                        else:
+                            plateau_count += 1  # Increment counter if loss plateaus
+                        # Move to next file if plateau_tolerance is reached
+                        if plateau_count >= plateau_tolerance:
+                            print(f"Loss plateaued for {plateau_tolerance} epochs. Moving to next file.")
+                            stop = True
+                    # Backward pass and optimization
+                        optimizer.zero_grad()
+                        loss.backward()
+                        optimizer.step()
 
-        del newDataset
-        del newDataLoader
+                        accuracy.update(outputs,labels)
 
-time.sleep(5)
+            del newDataset
+            del newDataLoader
 
-accuracy = accuracy.compute()
-print(f"Evaluation Accuracy: {accuracy}")
-torch.save(model.state_dict(), file_path_output + "FCNv2MODEL.pt")
+    time.sleep(5)
+
+    accuracy = accuracy.compute()
+    print(f"Evaluation Accuracy: {accuracy}")
+    torch.save(model.state_dict(), file_path_output + "FCNv2MODEL.pt")
