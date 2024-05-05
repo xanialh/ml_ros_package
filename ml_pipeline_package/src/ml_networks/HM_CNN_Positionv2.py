@@ -9,9 +9,34 @@ import torchvision.transforms as transforms
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
 import os
+import yaml
+import torchmetrics
+import time
 
-import torch
-import torch.nn as nn
+# Load configuration
+try:
+  with open("config/config_HM_CNN_Positionv2.yaml", "r") as f:
+    config = yaml.safe_load(f)
+except FileNotFoundError:
+  print("Error: Configuration file 'config.yaml' not found!")
+  # Handle the error or use default values
+
+file_path_input = config["file_path_input"]
+file_path_output = config["file_path_output"]
+training_image_size = config["training_image_size"]
+criterion = config["criterion"]
+optimizer = config["optimiser"]
+num_classes = config["num_classes"]
+batch_size = config["batch_size"]
+num_epochs = config["num_epochs"]
+dict = config["dict"]
+lower_bound_threshold = config["lower_bound_threshold"]
+upper_bound_threshold = config["upper_bound_threshold"]
+learning_rate = config["learning_rate"]
+momentum = config["momentum"]
+betas = config["betas"]
+alpha = config["alpha"]
+rho = config["rho"]
 
 class SocialHeatMapCombined(nn.Module):
     def __init__(self):
@@ -52,7 +77,6 @@ class SocialHeatMapCombined(nn.Module):
             nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, padding=1),
             nn.ReLU(inplace=True),
             nn.ConvTranspose2d(in_channels=64, out_channels=3, kernel_size=4, stride=2, padding=1),
-            nn.ReLU(inplace=True)
         )
 
         self.softmax = nn.Softmax(dim=1)
@@ -133,11 +157,9 @@ class HMDataset(Dataset):
     def getLabels(self):
         return self.labels
 
-
-
 def socialMapToLabels(socialGridMap):
-    low_bound = 0.5
-    high_bound = 30
+    low_bound = 0.1
+    high_bound = 0.4
 
     length = len(socialGridMap)
 
@@ -184,40 +206,6 @@ def loadFromTxt(sgmFilename,ogmFilename,density=False):
                 if line1[1] == line2[1]:
                     pairs.append((line1,line2))
                     break
-
-    if density == True:
-        largest_header_pair = max(pairs, key=lambda p: float(p[0][1]))
-        largest_social_grid, largest_obstacle_grid = largest_header_pair
-        largest_height, largest_width = int(float(largest_social_grid[2])), int(float(largest_social_grid[3]))
-        largest_header = float(largest_social_grid[1])
-        np_social_grid = np.array(largest_social_grid[4:])
-        reshape_final_social_grid = np_social_grid.reshape((largest_height, largest_width))
-        reshape_final_social_grid = reshape_final_social_grid.astype(float)
-        reshape_final_social_grid = np.nan_to_num(reshape_final_social_grid,nan=0)
-
-        #test_ogm = np.array(largest_obstacle_grid[4:])
-        #test_ogm = test_ogm.reshape((largest_height, largest_width))
-        #test_ogm = test_ogm.astype(float)
-        #show_array_as_image(test_ogm)
-
-        for pair in pairs:
-            if pair[0][1] != largest_header:
-                socialGridMap = np.array(pair[0][4:])
-                height,width = int(float(pair[0][2])),int(float(pair[0][3]))
-                reshape_socialGridMap = socialGridMap.reshape(height,width)
-                reshape_socialGridMap = reshape_socialGridMap.astype(float)
-                padded_array = pad_array_to_shape(reshape_socialGridMap,(largest_height, largest_width),0)
-                padded_array = padded_array.astype(float)
-                padded_array = np.nan_to_num(padded_array,nan=0)
-                #show_array_as_image(padded_array)
-                reshape_final_social_grid = np.add(reshape_final_social_grid,padded_array)
-
-        reshape_final_social_grid = np.ravel(reshape_final_social_grid)
-        sgmFront = np.array([1,largest_header,largest_height,largest_width])
-        sgm = np.concatenate((sgmFront,reshape_final_social_grid))
-        sgmList = sgm.tolist()
-
-        pairs = [(sgmList,largest_obstacle_grid)]
 
     return pairs
 
@@ -274,9 +262,6 @@ def addFilesToDataset(matching_files,dataset):
             print(f"Pairs for files with number {file_number}:")
             loadIntoDataset(pairs,dataset)
 
-def main():
-    pass
-
 # Define transformations
 transform = transforms.Compose([
     transforms.ToPILImage(),
@@ -284,42 +269,96 @@ transform = transforms.Compose([
     transforms.ToTensor()
 ])
 
-model = SocialHeatMapCombined() # Instantiate the model
-criterion = nn.CrossEntropyLoss()
-optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
+matchingFiles = find_matching_files(file_path_input)
 
-newDataset = HMDataset(transform=transform)
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-matchingFiles = find_matching_files("/home/danielhixson/ros/noetic/system/src/ML/ml/dataCollection/mapsWithCoords/MAPSSPLITBYINDEX")
+model = SocialHeatMapCombined().to(device)
 
-addFilesToDataset(matchingFiles,newDataset)
+accuracy = torchmetrics.Accuracy(task="multiclass",num_classes=num_classes)
+accuracy = accuracy.to(device)
 
-#create dataloader
-batch_size = 32
-dataLoader = DataLoader(newDataset,batch_size=batch_size,shuffle=True)
+criterion = 1
+optimizer = 2
 
-num_epochs = 200
-#EXAMPLE TRAINING (CHANGE FOR LATER SINCE FILES NEED TO BE READ AND CLASSED)
-for epoch in range(num_epochs):
-    # Iterate over the dataset
-    for inputs, labels, coord in dataLoader:
-        # Forward pass
+if criterion == 1:
+    criterion = nn.CrossEntropyLoss()
+elif criterion == 2:
+    criterion = nn.BCELoss()
+else:
+    raise ValueError("Invalid criterion value for loss function")
 
-        outputs = model(coord,inputs)
+if optimizer == 1:
+    optimizer = optim.SGD(model.parameters(), lr=learning_rate, momentum=momentum)
+elif optimizer == 2:
+    optimizer = optim.Adam(model.parameters(), lr=learning_rate, betas=betas)
+elif optimizer == 3:
+    optimizer = optim.RMSprop(model.parameters(), lr=learning_rate, alpha=alpha)
+elif optimizer == 4:
+    optimizer = optim.Adadelta(model.parameters(), rho=rho)
+elif optimizer == 5:
+    optimizer = optim.Adagrad(model.parameters(), lr=learning_rate)
+else:
+    raise ValueError("Invalid value for optimiser")
 
-        # Compute the loss
-        loss = criterion(outputs, labels)
-        print(loss.item())
-        # Backward pass and optimization
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
+matchingFiles = find_matching_files(file_path_input)
 
-if __name__ == "__main__":
-    test_social_grid = [float("nan"),25,2,4,89,99,0.4,0.1,0.1,0,float("nan")]
+tolerance = 0.0000000000000000001  # Threshold for loss function change (adjust as needed)
+prev_loss = float('inf')  # Initialize with a high value
+plateau_tolerance = 25
 
-    print(socialMapToLabels(test_social_grid))
+for file_number, files in matchingFiles.items():
+    plateau_count = 0
+    if 'socialGridMap' in files and 'obstacleGridMap' in files:
+        newDataset = HMDataset(transform=transform)
+        sgmFilename = files['socialGridMap']
+        ogmFilename = files['obstacleGridMap']
+        pairs = loadFromTxt(sgmFilename, ogmFilename,)
+        print(f"file number: {file_number}")
+        loadIntoDataset(pairs,newDataset)
 
+        newDataLoader = DataLoader(newDataset,batch_size=batch_size,shuffle=True)
+
+        stop = False
+
+        for epoch in range(num_epochs):
+        # Iterate over the dataset
+            if stop != True:
+                for inputs, labels, coord in newDataLoader:
+                    inputs = inputs.to(device)
+                    labels = labels.to(device)
+                    coord = coord.to(device)
+                # Forward pass
+                    outputs = model(coord,inputs)
+                # Compute the loss
+                    loss = criterion(outputs, labels)
+                    print(loss.item())
+
+                    if abs(prev_loss - loss.item()) > tolerance:
+                        prev_loss = loss.item()  # Update previous loss
+                        plateau_count = 0  # Reset plateau counter if improvement detected
+                    else:
+                        plateau_count += 1  # Increment counter if loss plateaus
+                    # Move to next file if plateau_tolerance is reached
+                    if plateau_count >= plateau_tolerance:
+                        print(f"Loss plateaued for {plateau_tolerance} epochs. Moving to next file.")
+                        stop = True
+                # Backward pass and optimization
+                    optimizer.zero_grad()
+                    loss.backward()
+                    optimizer.step()
+
+                    accuracy.update(outputs,labels)
+                    
+        
+        del newDataset
+        del newDataLoader
+
+time.sleep(5)
+
+accuracy = accuracy.compute()
+print(f"Evaluation Accuracy: {accuracy}")
+torch.save(model.state_dict(), file_path_output + "my_model.pt")
 
 
 
