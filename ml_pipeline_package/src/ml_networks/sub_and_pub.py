@@ -114,7 +114,8 @@ data
     sgmPubHigh.publish(high_msg)
 
 rospy.init_node("mlNetwork")
-ogmSub = rospy.Subscriber(ogm_topic, OccupancyGrid, o_gridmap_callback,callback_args=model,)
+ogmSub = rospy.Subscriber(ogm_topic, OccupancyGrid, o_gridmap_callback,callback_args=model)
+
 sgmPubLow = rospy.Publisher("/ml_sgm_low",OccupancyGrid,queue_size=10)
 sgmPubMedium = rospy.Publisher("/ml_sgm_medium",OccupancyGrid,queue_size=10)
 sgmPubHigh = rospy.Publisher("/ml_sgm_high",OccupancyGrid,queue_size=10)
