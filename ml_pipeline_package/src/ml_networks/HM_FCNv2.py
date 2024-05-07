@@ -315,4 +315,4 @@ if __name__ == "__main__":
 
     accuracy = accuracy.compute()
     print(f"Evaluation Accuracy: {accuracy}")
-    torch.save(model.state_dict(), file_path_output + "FCNv2MODEL2.pt")
+    torch.save(model.state_dict(), file_path_output + "model_steven.pt")
