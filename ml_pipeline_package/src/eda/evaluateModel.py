@@ -1,10 +1,6 @@
 import torch
 from torch import nn
 from torch.utils.data import DataLoader
-from ml_networks import HM_CNN_Position
-from ml_networks import HM_CNN_Positionv2
-from ml_networks import HM_FCN
-from ml_networks import HM_FCNv2
 
 import torch
 import torch.nn as nn
@@ -21,8 +17,49 @@ import yaml
 import torchmetrics
 import time
 
+class SocialHeatMapFCN(nn.Module):
+    def __init__(self):
+        super(SocialHeatMapFCN, self).__init__()
+        
+        # Encoder (feature extraction)
+        self.encoder = nn.Sequential(
+            nn.Conv2d(in_channels=1, out_channels=64, kernel_size=3, padding=1), 
+            nn.ReLU(inplace=True),
+            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=2, stride=2),
+            nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, padding=1),  # Add another convolutional layer
+            nn.ReLU(inplace=True),
+            nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, padding=1),
+            nn.MaxPool2d(kernel_size=2, stride=2)
+        )
+        
+        # Decoder (upsampling)
+        self.decoder = nn.Sequential(
+            nn.ConvTranspose2d(in_channels=128, out_channels=128, kernel_size=4, stride=2, padding=1),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(in_channels=128, out_channels=64, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(in_channels=64, out_channels=32, kernel_size=3, padding=1),  # Reduce to 32 filters before final layer
+            nn.ReLU(inplace=True),
+            nn.ConvTranspose2d(in_channels=32, out_channels=3, kernel_size=4, stride=2, padding=1),
+        )
+
+        self.softmax = nn.Softmax(dim=1)
+        
+    def forward(self, x):
+        # Forward pass through the encoder
+        x = self.encoder(x)
+        
+        # Forward pass through the decoder
+        x = self.decoder(x)
+
+        x = self.softmax(x)
+        
+        return x
+
 def load_model(model_path):
-  model = HM_FCNv2.SocialHeatMapFCN()
+  model = SocialHeatMapFCN()
   model.load_state_dict(torch.load(model_path))
   model.eval()  # Set the model to evaluation mode
   return model
@@ -168,7 +205,7 @@ transforms.Resize((128,128), interpolation=transforms.InterpolationMode.NEAREST)
 transforms.ToTensor()
 ])
 
-model = load_model(model_path)
+model = load_model("/home/danielhixson/socNavProject/ml_ros_package/ml_pipeline_package/data/trained_models/office/crop_fix_model_steven.pt")
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -177,9 +214,19 @@ model.to(device)
 accuracy = torchmetrics.Accuracy(task="multiclass",num_classes=3)
 accuracy = accuracy.to(device)
 
+mse = torchmetrics.MeanSquaredError()
+mse = mse.to(device)
+
+mae = torchmetrics.MeanAbsoluteError()
+mae = mae.to(device)
+
+iou = torchmetrics.JaccardIndex(task= "multiclass",num_classes=3)
+iou = iou.to(device)
+
+
 criterion = nn.CrossEntropyLoss()
 
-matchingFiles = find_matching_files(file_path_input)
+matchingFiles = find_matching_files("/home/danielhixson/socNavProject/ml_ros_package/ml_pipeline_package/data/office/eval/without_coords/cropped_maps")
 
 total_loss = 0.0
 num_samples = 0
@@ -193,7 +240,7 @@ for file_number, files in matchingFiles.items():
         print(f"file number: {file_number}")
         loadIntoDataset(pairs,newDataset)
 
-        newDataLoader = DataLoader(newDataset,batch_size=batch_size,shuffle=True)
+        newDataLoader = DataLoader(newDataset,batch_size=12,shuffle=True)
 
         stop = False
         with torch.no_grad():
@@ -205,13 +252,26 @@ for file_number, files in matchingFiles.items():
                 # Compute the loss
                 loss = criterion(outputs, labels)
                 total_loss += loss.item()
+                num_samples += 1
+                mse.update(outputs,labels)
+                mae.update(outputs,labels)
+                iou.update(outputs,labels)
                 accuracy.update(outputs,labels)
 
-del newDataset
-del newDataLoader
+    del newDataset
+    del newDataLoader
 
 time.sleep(5)
 
 accuracy = accuracy.compute()
+mse = mse.compute()
+mae = mae.compute()
+iou = iou.compute()
+
+avg_loss = total_loss/num_samples
+
+print(f"iou: {iou}")
+print(f"average loss: {avg_loss}")
+print(f"mse: {mse}")
+print(f"mae: {mae}")
 print(f"Evaluation Accuracy: {accuracy}")
-torch.save(model.state_dict(), file_path_output + "crop_fix_model_steven.pt")
