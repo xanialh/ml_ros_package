@@ -223,6 +223,17 @@ mae = mae.to(device)
 iou = torchmetrics.JaccardIndex(task= "multiclass",num_classes=3)
 iou = iou.to(device)
 
+precision = torchmetrics.Precision(task= "multiclass",num_classes=3)
+precision = precision.to(device)
+
+f1 = torchmetrics.F1Score(task= "multiclass",num_classes=3)
+f1 = f1.to(device)
+
+recall = torchmetrics.Recall(task= "multiclass",num_classes=3)
+recall = recall.to(device)
+
+confusionMatrix = torchmetrics.ConfusionMatrix(task= "multiclass",num_classes=3)
+confusionMatrix = confusionMatrix.to(device)
 
 criterion = nn.CrossEntropyLoss()
 
@@ -256,7 +267,11 @@ for file_number, files in matchingFiles.items():
                 mse.update(outputs,labels)
                 mae.update(outputs,labels)
                 iou.update(outputs,labels)
+                precision.update(outputs,labels)
                 accuracy.update(outputs,labels)
+                f1.update(outputs,labels)
+                recall.update(outputs,labels)
+                confusionMatrix.update(outputs,labels)
 
     del newDataset
     del newDataLoader
@@ -267,6 +282,10 @@ accuracy = accuracy.compute()
 mse = mse.compute()
 mae = mae.compute()
 iou = iou.compute()
+precision = precision.compute()
+f1 = f1.compute()
+recall = recall.compute()
+confusionMatrix = confusionMatrix.compute()
 
 avg_loss = total_loss/num_samples
 
@@ -275,3 +294,9 @@ print(f"average loss: {avg_loss}")
 print(f"mse: {mse}")
 print(f"mae: {mae}")
 print(f"Evaluation Accuracy: {accuracy}")
+print(f"Precision: {precision}")
+print(f"f1: {f1}")
+print(f"recall: {recall}")
+print(f"confusion matrix: {confusionMatrix}")
+
+

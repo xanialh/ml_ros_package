@@ -125,7 +125,7 @@ class HMDataset(Dataset):
 
 def socialMapToLabels(socialGridMap):
     low_bound = 0.01
-    high_bound = 0.4
+    high_bound = 0.2
 
     length = len(socialGridMap)
 
@@ -306,4 +306,4 @@ if __name__ == "__main__":
 
     accuracy = accuracy.compute()
     print(f"Evaluation Accuracy: {accuracy}")
-    torch.save(model.state_dict(), file_path_output + "crop_fix_model_steven.pt")
+    torch.save(model.state_dict(), file_path_output + "crop_fix_model_steven2.pt")
