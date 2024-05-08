@@ -1,2 +1,2 @@
-directory_path_input: "data/maps_without_coords/raw_maps/office"
-directory_path_output: "data/maps_without_coords/maps_split_by_index/office"
+directory_path_input: "/home/danielhixson/socNavProject/ml_ros_package/ml_pipeline_package/data/office/eval/without_coords/raw_maps"
+directory_path_output: "/home/danielhixson/socNavProject/ml_ros_package/ml_pipeline_package/data/office/eval/without_coords/split_maps"

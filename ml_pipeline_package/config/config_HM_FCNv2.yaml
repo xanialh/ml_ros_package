@@ -4,8 +4,8 @@ training_image_size: [128,128]
 criterion: 1
 optimiser: 3
 num_classes: 3
-batch_size: 12
-num_epochs: 2
+batch_size: 6
+num_epochs: 1000
 dict: 1
 lower_bound_threshold: 100
 upper_bound_threshold: 700

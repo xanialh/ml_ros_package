@@ -26,9 +26,11 @@ ogm_topic = config["ogm_topic"]
 sgm_topic = config["sgm_topic"]
 
 model = SocialHeatMapFCN()
-model_path = "data/trained_models/office/FCNv2MODEL.pt"
+model_path = "/home/danielhixson/socNavProject/ml_ros_package/ml_pipeline_package/data/trained_models/office/crop_fix_model_steven.pt"
 
 model.load_state_dict(torch.load(model_path))
+
+print(model.parameters())
 
 model.eval()
 

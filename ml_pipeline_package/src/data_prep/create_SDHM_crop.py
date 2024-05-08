@@ -90,7 +90,6 @@ def loadFromTxt(sgmFilename,ogmFilename,aggregation_method="sum"):
 
     
     reshape_final_social_grid = min_max_norm(reshape_final_social_grid)
-    reshape_final_social_grid = np.ravel(reshape_final_social_grid)
     
     new_pairs = []
 
@@ -101,16 +100,16 @@ def loadFromTxt(sgmFilename,ogmFilename,aggregation_method="sum"):
             height,width = int(float(pair[1][2])),int(float(pair[1][3]))
             reshape_obstacleGridMap = obstacleGridMap.reshape(height,width)
             reshape_obstacleGridMap = reshape_obstacleGridMap.astype(float)
-            padded_ogm_array = pad_array_to_shape(reshape_obstacleGridMap,(largest_height, largest_width),0)
-            padded_ogm_array = padded_ogm_array.astype(float)
 
-            padded_ogm_array = np.ravel(padded_ogm_array)
-            ogmFront = np.array([0,ogm_header,largest_height,largest_width])
-            ogm = np.concatenate((ogmFront,padded_ogm_array))
+            cropped_social_grid = reshape_final_social_grid[:height, :width]
+
+            reshape_obstacleGridMap = np.ravel(reshape_obstacleGridMap)
+            ogmFront = np.array([0,ogm_header,height,width])
+            ogm = np.concatenate((ogmFront,reshape_obstacleGridMap))
             ogmList = ogm.tolist()
 
-            sgmFront = np.array([1,ogm_header,largest_height,largest_width])
-            sgm = np.concatenate((sgmFront,reshape_final_social_grid))
+            sgmFront = np.array([1,ogm_header,height,width])
+            sgm = np.concatenate((sgmFront,cropped_social_grid.ravel()))
             sgmList = sgm.tolist()
 
             new_pairs.append((sgmList,ogmList))
@@ -171,6 +170,6 @@ def socialHeatDensityCreate(folderPathInput,folderPathOutput):
     addFilesToDataset(matching_pairs,folderPathOutput)
 
 if __name__ == "__main__":
-    folderPathInput = "/home/danielhixson/socNavProject/ml_ros_package/ml_pipeline_package/data/maps_without_coords/maps_split_by_index/office"
-    folderPathOutput = "/home/danielhixson/socNavProject/ml_ros_package/ml_pipeline_package/data/maps_without_coords/maps_SDHM_cropped/office"
+    folderPathInput = "/home/danielhixson/socNavProject/ml_ros_package/ml_pipeline_package/data/office/eval/without_coords/split_maps"
+    folderPathOutput = "/home/danielhixson/socNavProject/ml_ros_package/ml_pipeline_package/data/office/eval/without_coords/cropped_maps"
     socialHeatDensityCreate(folderPathInput,folderPathOutput)

@@ -191,15 +191,6 @@ def show_array_as_image(array):
   plt.colorbar()
   plt.show()
 
-def pad_array_to_shape(array, target_shape, pad_value=0):
-        # Calculate the padding amounts for each dimension
-    pad_width = [(target_shape[0] - array.shape[0], 0), (target_shape[1] - array.shape[1], 0)]
-
-    # Pad the array using np.pad
-    padded_array = np.pad(array, pad_width, mode='constant', constant_values=pad_value)
-
-    return padded_array
-
 def find_matching_files(folder_path):
     matching_files = {}
     for file in os.listdir(folder_path):
@@ -315,4 +306,4 @@ if __name__ == "__main__":
 
     accuracy = accuracy.compute()
     print(f"Evaluation Accuracy: {accuracy}")
-    torch.save(model.state_dict(), file_path_output + "model_steven.pt")
+    torch.save(model.state_dict(), file_path_output + "crop_fix_model_steven.pt")
