@@ -12,7 +12,6 @@ import torch.nn as nn
 import torch.optim as optim
 import cv2
 
-
 # Load configuration
 try:
   with open("config/config_record_maps.yaml", "r") as f:
@@ -26,7 +25,7 @@ ogm_topic = config["ogm_topic"]
 sgm_topic = config["sgm_topic"]
 
 model = SocialHeatMapFCN()
-model_path = "/home/danielhixson/socNavProject/ml_ros_package/ml_pipeline_package/data/trained_models/office/crop_fix_model_steven.pt"
+model_path = "/home/danielhixson/socNavProject/ml_ros_package/ml_pipeline_package/data/trained_models/office/fixedclassesChanged.pt"
 
 model.load_state_dict(torch.load(model_path))
 

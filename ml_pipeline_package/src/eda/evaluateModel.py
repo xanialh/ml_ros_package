@@ -16,6 +16,7 @@ import os
 import yaml
 import torchmetrics
 import time
+import cv2
 
 class SocialHeatMapFCN(nn.Module):
     def __init__(self):
@@ -65,10 +66,9 @@ def load_model(model_path):
   return model
 
 class HMDataset(Dataset):
-    def __init__(self, transform=None) -> None:
+    def __init__(self) -> None:
         self.data = []
         self.labels = []
-        self.transform = transform
 
     def __len__(self):
         return len(self.data)
@@ -76,11 +76,6 @@ class HMDataset(Dataset):
     def __getitem__(self, index):
         sample = self.data[index]
         label = self.labels[index]
-
-        if self.transform:
-            sample = self.transform(sample)
-            label = self.transform(label)
-            label = torch.round(label)
 
         label3Channels = one_hot_encode(label.squeeze(0))
 
@@ -90,16 +85,19 @@ class HMDataset(Dataset):
         data = np.array(data)
         labels = np.array(labels)
 
-        data = data.astype(float)
-        labels = labels.astype(int)
+        data = data.astype(np.float32)
+        labels = labels.astype(np.float32)
 
         reshapeData = data.reshape(row_index,column_index)
-        dataTensor = torch.tensor(reshapeData)
+        newReshapeData = cv2.resize(reshapeData, (128, 128), interpolation=cv2.INTER_AREA)
+        dataTensor = torch.from_numpy(newReshapeData)
+        
 
         reshapeLabels = labels.reshape(row_index,column_index)
-        labelsTensor = torch.Tensor(reshapeLabels)
+        newReshapeLabels = cv2.resize(reshapeLabels, (128, 128), interpolation=cv2.INTER_AREA)
+        labelsTensor = torch.from_numpy(newReshapeLabels)
 
-        self.data.append(dataTensor)
+        self.data.append(dataTensor.unsqueeze(0))
         self.labels.append(labelsTensor)
 
     def getData(self):
@@ -110,18 +108,18 @@ class HMDataset(Dataset):
 
 def socialMapToLabels(socialGridMap):
     low_bound = 0.01
-    high_bound = 0.4
+    high_bound = 0.3
 
     length = len(socialGridMap)
 
     for i in range(length):
         value = float(socialGridMap[i])
-        if value < low_bound or math.isnan(value):
-            socialGridMap[i] = 0
+        if value < low_bound:
+            socialGridMap[i] = 0.0
         elif value >= high_bound:
-            socialGridMap[i] = 2
+            socialGridMap[i] = 2.0
         else:
-            socialGridMap[i] = 1
+            socialGridMap[i] = 1.0
 
     return socialGridMap
 
@@ -133,9 +131,9 @@ def one_hot_encode(data_tensor):
 
   one_hot = torch.zeros((num_channels, data_tensor.shape[0], data_tensor.shape[1]))
 
-  one_hot[0] = torch.where(data_tensor == 0, 1.0, 0.0)  # Channel 0: Low activity
-  one_hot[1] = torch.where(data_tensor == 1, 1.0, 0.0)  # Channel 1: Medium activity
-  one_hot[2] = torch.where(data_tensor == 2, 1.0, 0.0)  # Channel 2: High activity
+  one_hot[0] = torch.where(data_tensor == 0.0, 1.0, 0.0)  # Channel 0: Low activity
+  one_hot[1] = torch.where(data_tensor == 1.0, 1.0, 0.0)  # Channel 1: Medium activity
+  one_hot[2] = torch.where(data_tensor == 2.0, 1.0, 0.0)  # Channel 2: High activity
 
   return one_hot
 
@@ -198,14 +196,7 @@ def addFilesToDataset(matching_files,dataset):
             print(f"Pairs for files with number {file_number}:")
             loadIntoDataset(pairs,dataset)
 
-# Define transformations
-transform = transforms.Compose([
-transforms.ToPILImage(),
-transforms.Resize((128,128), interpolation=transforms.InterpolationMode.NEAREST),
-transforms.ToTensor()
-])
-
-model = load_model("/home/danielhixson/socNavProject/ml_ros_package/ml_pipeline_package/data/trained_models/office/crop_fix_model_steven.pt")
+model = load_model("/home/danielhixson/socNavProject/ml_ros_package/ml_pipeline_package/data/trained_models/office/fixedclassesChanged.pt")
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -232,7 +223,7 @@ f1 = f1.to(device)
 recall = torchmetrics.Recall(task= "multiclass",num_classes=3)
 recall = recall.to(device)
 
-confusionMatrix = torchmetrics.ConfusionMatrix(task= "multiclass",num_classes=3)
+confusionMatrix = torchmetrics.ConfusionMatrix(num_classes=3)
 confusionMatrix = confusionMatrix.to(device)
 
 criterion = nn.CrossEntropyLoss()
@@ -244,7 +235,7 @@ num_samples = 0
 
 for file_number, files in matchingFiles.items():
     if 'socialGridMap' in files and 'obstacleGridMap' in files:
-        newDataset = HMDataset(transform=transform)
+        newDataset = HMDataset()
         sgmFilename = files['socialGridMap']
         ogmFilename = files['obstacleGridMap']
         pairs = loadFromTxt(sgmFilename, ogmFilename,)
@@ -258,6 +249,7 @@ for file_number, files in matchingFiles.items():
             for inputs, labels in newDataLoader:
                 inputs = inputs.to(device)
                 labels = labels.to(device)
+                print(torch.sum(labels[0][2]))
                 # Forward pass
                 outputs = model(inputs)
                 # Compute the loss

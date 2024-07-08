@@ -1,11 +1,11 @@
-file_path_input: "data/maps_without_coords/maps_SDHM_cropped/office"
+file_path_input: "/home/danielhixson/socNavProject/ml_ros_package/ml_pipeline_package/data/maps_without_coords/maps_SDHM_cropped/office"
 file_path_output: "data/trained_models/office/"
 training_image_size: [128,128]
 criterion: 1
 optimiser: 3
 num_classes: 3
 batch_size: 6
-num_epochs: 1000
+num_epochs: 5
 dict: 1
 lower_bound_threshold: 100
 upper_bound_threshold: 700

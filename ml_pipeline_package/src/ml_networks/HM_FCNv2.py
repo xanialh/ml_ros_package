@@ -12,6 +12,8 @@ import os
 import yaml
 import torchmetrics
 import time
+import cv2
+import PIL
 
 # Load configuration
 try:
@@ -49,10 +51,12 @@ class SocialHeatMapFCN(nn.Module):
             nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, padding=1),
             nn.ReLU(inplace=True),
             nn.MaxPool2d(kernel_size=2, stride=2),
-            nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, padding=1),  # Add another convolutional layer
+            nn.Dropout(p=0.2),  # Add dropout with probability 0.5
+            nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, padding=1),
             nn.ReLU(inplace=True),
             nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, padding=1),
-            nn.MaxPool2d(kernel_size=2, stride=2)
+            nn.MaxPool2d(kernel_size=2, stride=2),
+            nn.Dropout(p=0.2)  # Add dropout with probability 0.5
         )
         
         # Decoder (upsampling)
@@ -61,7 +65,7 @@ class SocialHeatMapFCN(nn.Module):
             nn.ReLU(inplace=True),
             nn.Conv2d(in_channels=128, out_channels=64, kernel_size=3, padding=1),
             nn.ReLU(inplace=True),
-            nn.Conv2d(in_channels=64, out_channels=32, kernel_size=3, padding=1),  # Reduce to 32 filters before final layer
+            nn.Conv2d(in_channels=64, out_channels=32, kernel_size=3, padding=1),
             nn.ReLU(inplace=True),
             nn.ConvTranspose2d(in_channels=32, out_channels=3, kernel_size=4, stride=2, padding=1),
         )
@@ -80,10 +84,9 @@ class SocialHeatMapFCN(nn.Module):
         return x
     
 class HMDataset(Dataset):
-    def __init__(self, transform=None) -> None:
+    def __init__(self) -> None:
         self.data = []
         self.labels = []
-        self.transform = transform
 
     def __len__(self):
         return len(self.data)
@@ -91,11 +94,6 @@ class HMDataset(Dataset):
     def __getitem__(self, index):
         sample = self.data[index]
         label = self.labels[index]
-
-        if self.transform:
-            sample = self.transform(sample)
-            label = self.transform(label)
-            label = torch.round(label)
 
         label3Channels = one_hot_encode(label.squeeze(0))
 
@@ -105,16 +103,19 @@ class HMDataset(Dataset):
         data = np.array(data)
         labels = np.array(labels)
 
-        data = data.astype(float)
-        labels = labels.astype(int)
+        data = data.astype(np.float32)
+        labels = labels.astype(np.float32)
 
         reshapeData = data.reshape(row_index,column_index)
-        dataTensor = torch.tensor(reshapeData)
+        newReshapeData = cv2.resize(reshapeData, (128, 128), interpolation=cv2.INTER_AREA)
+        dataTensor = torch.from_numpy(newReshapeData)
+        
 
         reshapeLabels = labels.reshape(row_index,column_index)
-        labelsTensor = torch.Tensor(reshapeLabels)
+        newReshapeLabels = cv2.resize(reshapeLabels, (128, 128), interpolation=cv2.INTER_AREA)
+        labelsTensor = torch.from_numpy(newReshapeLabels)
 
-        self.data.append(dataTensor)
+        self.data.append(dataTensor.unsqueeze(0))
         self.labels.append(labelsTensor)
 
     def getData(self):
@@ -125,18 +126,18 @@ class HMDataset(Dataset):
 
 def socialMapToLabels(socialGridMap):
     low_bound = 0.01
-    high_bound = 0.2
+    high_bound = 0.6
 
     length = len(socialGridMap)
 
     for i in range(length):
         value = float(socialGridMap[i])
-        if value < low_bound or math.isnan(value):
-            socialGridMap[i] = 0
-        elif value >= high_bound:
-            socialGridMap[i] = 2
+        if value < low_bound:
+            socialGridMap[i] = 0.0
+        elif value > high_bound:
+            socialGridMap[i] = 2.0
         else:
-            socialGridMap[i] = 1
+            socialGridMap[i] = 1.0
 
     return socialGridMap
 
@@ -151,6 +152,7 @@ def one_hot_encode(data_tensor):
   one_hot[0] = torch.where(data_tensor == 0, 1.0, 0.0)  # Channel 0: Low activity
   one_hot[1] = torch.where(data_tensor == 1, 1.0, 0.0)  # Channel 1: Medium activity
   one_hot[2] = torch.where(data_tensor == 2, 1.0, 0.0)  # Channel 2: High activity
+  print(torch.sum(one_hot[2]))
 
   return one_hot
 
@@ -215,13 +217,6 @@ def addFilesToDataset(matching_files,dataset):
 
 if __name__ == "__main__":
 
-    # Define transformations
-    transform = transforms.Compose([
-    transforms.ToPILImage(),
-    transforms.Resize((training_image_size[0], training_image_size[1]), interpolation=transforms.InterpolationMode.NEAREST),
-    transforms.ToTensor()
-    ])
-
     model = SocialHeatMapFCN() # Instantiate the model
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -260,7 +255,7 @@ if __name__ == "__main__":
     for file_number, files in matchingFiles.items():
         plateau_count = 0
         if 'socialGridMap' in files and 'obstacleGridMap' in files:
-            newDataset = HMDataset(transform=transform)
+            newDataset = HMDataset()
             sgmFilename = files['socialGridMap']
             ogmFilename = files['obstacleGridMap']
             pairs = loadFromTxt(sgmFilename, ogmFilename,)
@@ -306,4 +301,4 @@ if __name__ == "__main__":
 
     accuracy = accuracy.compute()
     print(f"Evaluation Accuracy: {accuracy}")
-    torch.save(model.state_dict(), file_path_output + "crop_fix_model_steven2.pt")
+    torch.save(model.state_dict(), file_path_output + "weightedfixedclassesChanged.pt")
