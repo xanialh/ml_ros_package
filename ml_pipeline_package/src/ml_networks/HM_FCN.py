@@ -13,6 +13,7 @@ import os
 import yaml
 import torchmetrics
 import time
+import cv2
 
 # Load configuration
 try:
@@ -99,16 +100,18 @@ class HMDataset(Dataset):
         data = np.array(data)
         labels = np.array(labels)
 
-        data = data.astype(float)
-        labels = labels.astype(int)
+        data = data.astype(np.float32)
+        labels = labels.astype(np.float32)
 
         reshapeData = data.reshape(row_index,column_index)
-        dataTensor = torch.tensor(reshapeData)
-
+        newReshapeData = cv2.resize(reshapeData, (128, 128), interpolation=cv2.INTER_AREA)
+        dataTensor = torch.from_numpy(newReshapeData)
+        
         reshapeLabels = labels.reshape(row_index,column_index)
-        labelsTensor = torch.Tensor(reshapeLabels)
+        newReshapeLabels = cv2.resize(reshapeLabels, (128, 128), interpolation=cv2.INTER_AREA)
+        labelsTensor = torch.from_numpy(newReshapeLabels)
 
-        self.data.append(dataTensor)
+        self.data.append(dataTensor.unsqueeze(0))
         self.labels.append(labelsTensor)
 
     def getData(self):

@@ -127,11 +127,13 @@ while (flag):
     msgStart.data = True
     bagRecordPub.publish(msgStart)
     rospy.loginfo("Recording grid maps")
+    rospy.loginfo(waypoints)
     current_time_msg = rospy.wait_for_message("clock", Clock)
     current_time = current_time_msg.clock.secs
     max_test_time = rospy.get_param("/metrics_recorder_node/max_test_time")
-    
     if goal_reached or (current_time>max_test_time):
+        
+
         if len(waypoints) == 0:
             flag = False
             rospy.loginfo("STAR STAR STAR STAR STAR STAR STAR STAR STAR STAR STAR STAR STAR STAR STAR STAR STAR STAR ")

@@ -110,7 +110,6 @@ class HMDataset(Dataset):
         newReshapeData = cv2.resize(reshapeData, (128, 128), interpolation=cv2.INTER_AREA)
         dataTensor = torch.from_numpy(newReshapeData)
         
-
         reshapeLabels = labels.reshape(row_index,column_index)
         newReshapeLabels = cv2.resize(reshapeLabels, (128, 128), interpolation=cv2.INTER_AREA)
         labelsTensor = torch.from_numpy(newReshapeLabels)
