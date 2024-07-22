@@ -13,7 +13,7 @@ import yaml
 
 # Load configuration
 try:
-  with open("/home/danielhixson/socNavProject/ml_ros_package/ml_pipeline_package/config/config_training_route.yaml", "r") as f:
+  with open("/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/config/config_training_route.yaml", "r") as f:
     config = yaml.safe_load(f)
 except FileNotFoundError:
   print("Error: Configuration file 'config.yaml' not found!")
@@ -69,7 +69,7 @@ def init_launch(launchfile, process_listener, version, start_position, goal_posi
 
 rospy.init_node("smf_nav_stack_tests_launcher")
 
-LAUNCH_FILE = "/home/danielhixson/ros/noetic/system/src/pepper_social_nav_tests/launch/smf_nav_stack_test.launch"
+LAUNCH_FILE = "/home/xanial/ros/noetic/system/src/pepper_social_nav_tests/launch/smf_nav_stack_test.launch"
 launch = init_launch(
     LAUNCH_FILE, ProcessListener(), version_choice, start_position, goal_position)
 launch.start()
@@ -134,6 +134,8 @@ while (flag):
     if goal_reached or (current_time>max_test_time):
         if len(waypoints) == 0:
             flag = False
+            rospy.loginfo("STAR STAR STAR STAR STAR STAR STAR STAR STAR STAR STAR STAR STAR STAR STAR STAR STAR STAR ")
+            print("**********************************************************************************************************************************")
             break
         elif len(waypoints) > num_waypoints:
             waypoints = subListWaypoints(waypoints,num_waypoints)

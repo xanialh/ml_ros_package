@@ -4,6 +4,6 @@ do
     echo "========================================================\n"
     echo "This is the $i th run\n"
     echo "========================================================\n"
-    python3 ~/socNavProject/ml_ros_package/ml_pipeline_package/src/training_sim/training_route.py
+    python3 ~/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/src/training_sim/training_route.py
     killall -9 gzserver gzclient
 done
