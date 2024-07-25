@@ -10,7 +10,7 @@ import torch.nn.functional as F
 import matplotlib.pyplot as plt
 import os
 import yaml
-import torchmetrics
+import torchmetrics 
 import time
 import cv2
 import PIL
@@ -123,9 +123,9 @@ class HMDataset(Dataset):
     def getLabels(self):
         return self.labels
 
-def socialMapToLabels(socialGridMap):
-    low_bound = 0.01
-    high_bound = 0.6
+def socialMapToLabels(socialGridMap,lower_bound_threshold,upper_bound_threshold):
+    low_bound = lower_bound_threshold
+    high_bound = upper_bound_threshold
 
     length = len(socialGridMap)
 
@@ -183,7 +183,7 @@ def loadIntoDataset(pairs,dataset):
         column_index = int(float(sgm[3]))
 
         data = ogm[4:]
-        labels = socialMapToLabels(sgm[4:])
+        labels = socialMapToLabels(sgm[4:],lower_bound_threshold,upper_bound_threshold)
 
         dataset.addData(data,labels,row_index,column_index)
 

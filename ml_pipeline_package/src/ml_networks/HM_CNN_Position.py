@@ -267,6 +267,9 @@ def addFilesToDataset(matching_files,dataset):
             print(f"Pairs for files with number {file_number}:")
             loadIntoDataset(pairs,dataset)
 
+def main():
+    pass
+
 # Define transformations
 transform = transforms.Compose([
     transforms.ToPILImage(),
