@@ -1,5 +1,5 @@
-file_path_input: "data/maps_with_coords/maps_SDHM_cropped/office"
-file_path_output: "data/trained_models/office/"
+file_path_input: "ml_pipeline_package/data/maps_with_coords/maps_SDHM_cropped/office"
+file_path_output: "ml_pipeline_package/data/trained_models"
 training_image_size: [128,128]
 criterion: 1
 optimiser: 3

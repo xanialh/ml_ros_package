@@ -196,99 +196,103 @@ def addFilesToDataset(matching_files,dataset):
             print(f"Pairs for files with number {file_number}:")
             loadIntoDataset(pairs,dataset)
 
-model = load_model("/home/danielhixson/socNavProject/ml_ros_package/ml_pipeline_package/data/trained_models/office/fixedclassesChanged.pt")
+def train():
+    model = load_model("")
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-model.to(device)
+    model.to(device)
 
-accuracy = torchmetrics.Accuracy(task="multiclass",num_classes=3)
-accuracy = accuracy.to(device)
+    accuracy = torchmetrics.Accuracy(task="multiclass",num_classes=3)
+    accuracy = accuracy.to(device)
 
-mse = torchmetrics.MeanSquaredError()
-mse = mse.to(device)
+    mse = torchmetrics.MeanSquaredError()
+    mse = mse.to(device)
 
-mae = torchmetrics.MeanAbsoluteError()
-mae = mae.to(device)
+    mae = torchmetrics.MeanAbsoluteError()
+    mae = mae.to(device)
 
-iou = torchmetrics.JaccardIndex(task= "multiclass",num_classes=3)
-iou = iou.to(device)
+    iou = torchmetrics.JaccardIndex(task= "multiclass",num_classes=3)
+    iou = iou.to(device)
 
-precision = torchmetrics.Precision(task= "multiclass",num_classes=3)
-precision = precision.to(device)
+    precision = torchmetrics.Precision(task= "multiclass",num_classes=3)
+    precision = precision.to(device)
 
-f1 = torchmetrics.F1Score(task= "multiclass",num_classes=3)
-f1 = f1.to(device)
+    f1 = torchmetrics.F1Score(task= "multiclass",num_classes=3)
+    f1 = f1.to(device)
 
-recall = torchmetrics.Recall(task= "multiclass",num_classes=3)
-recall = recall.to(device)
+    recall = torchmetrics.Recall(task= "multiclass",num_classes=3)
+    recall = recall.to(device)
 
-confusionMatrix = torchmetrics.ConfusionMatrix(num_classes=3)
-confusionMatrix = confusionMatrix.to(device)
+    confusionMatrix = torchmetrics.ConfusionMatrix(num_classes=3)
+    confusionMatrix = confusionMatrix.to(device)
 
-criterion = nn.CrossEntropyLoss()
+    criterion = nn.CrossEntropyLoss()
 
-matchingFiles = find_matching_files("/home/danielhixson/socNavProject/ml_ros_package/ml_pipeline_package/data/office/eval/without_coords/cropped_maps")
+    matchingFiles = find_matching_files("ml_pipeline_package/data/office/eval/without_coords/cropped_maps")
 
-total_loss = 0.0
-num_samples = 0
+    total_loss = 0.0
+    num_samples = 0
 
-for file_number, files in matchingFiles.items():
-    if 'socialGridMap' in files and 'obstacleGridMap' in files:
-        newDataset = HMDataset()
-        sgmFilename = files['socialGridMap']
-        ogmFilename = files['obstacleGridMap']
-        pairs = loadFromTxt(sgmFilename, ogmFilename,)
-        print(f"file number: {file_number}")
-        loadIntoDataset(pairs,newDataset)
+    for file_number, files in matchingFiles.items():
+        if 'socialGridMap' in files and 'obstacleGridMap' in files:
+            newDataset = HMDataset()
+            sgmFilename = files['socialGridMap']
+            ogmFilename = files['obstacleGridMap']
+            pairs = loadFromTxt(sgmFilename, ogmFilename,)
+            print(f"file number: {file_number}")
+            loadIntoDataset(pairs,newDataset)
 
-        newDataLoader = DataLoader(newDataset,batch_size=12,shuffle=True)
+            newDataLoader = DataLoader(newDataset,batch_size=12,shuffle=True)
 
-        stop = False
-        with torch.no_grad():
-            for inputs, labels in newDataLoader:
-                inputs = inputs.to(device)
-                labels = labels.to(device)
-                print(torch.sum(labels[0][2]))
-                # Forward pass
-                outputs = model(inputs)
-                # Compute the loss
-                loss = criterion(outputs, labels)
-                total_loss += loss.item()
-                num_samples += 1
-                mse.update(outputs,labels)
-                mae.update(outputs,labels)
-                iou.update(outputs,labels)
-                precision.update(outputs,labels)
-                accuracy.update(outputs,labels)
-                f1.update(outputs,labels)
-                recall.update(outputs,labels)
-                confusionMatrix.update(outputs,labels)
+            stop = False
+            with torch.no_grad():
+                for inputs, labels in newDataLoader:
+                    inputs = inputs.to(device)
+                    labels = labels.to(device)
+                    print(torch.sum(labels[0][2]))
+                    # Forward pass
+                    outputs = model(inputs)
+                    # Compute the loss
+                    loss = criterion(outputs, labels)
+                    total_loss += loss.item()
+                    num_samples += 1
+                    mse.update(outputs,labels)
+                    mae.update(outputs,labels)
+                    iou.update(outputs,labels)
+                    precision.update(outputs,labels)
+                    accuracy.update(outputs,labels)
+                    f1.update(outputs,labels)
+                    recall.update(outputs,labels)
+                    confusionMatrix.update(outputs,labels)
 
-    del newDataset
-    del newDataLoader
+        del newDataset
+        del newDataLoader
 
-time.sleep(5)
+    time.sleep(5)
 
-accuracy = accuracy.compute()
-mse = mse.compute()
-mae = mae.compute()
-iou = iou.compute()
-precision = precision.compute()
-f1 = f1.compute()
-recall = recall.compute()
-confusionMatrix = confusionMatrix.compute()
+    accuracy = accuracy.compute()
+    mse = mse.compute()
+    mae = mae.compute()
+    iou = iou.compute()
+    precision = precision.compute()
+    f1 = f1.compute()
+    recall = recall.compute()
+    confusionMatrix = confusionMatrix.compute()
 
-avg_loss = total_loss/num_samples
+    avg_loss = total_loss/num_samples
 
-print(f"iou: {iou}")
-print(f"average loss: {avg_loss}")
-print(f"mse: {mse}")
-print(f"mae: {mae}")
-print(f"Evaluation Accuracy: {accuracy}")
-print(f"Precision: {precision}")
-print(f"f1: {f1}")
-print(f"recall: {recall}")
-print(f"confusion matrix: {confusionMatrix}")
+    print(f"iou: {iou}")
+    print(f"average loss: {avg_loss}")
+    print(f"mse: {mse}")
+    print(f"mae: {mae}")
+    print(f"Evaluation Accuracy: {accuracy}")
+    print(f"Precision: {precision}")
+    print(f"f1: {f1}")
+    print(f"recall: {recall}")
+    print(f"confusion matrix: {confusionMatrix}")
+
+if __name__ == "__main__":
+    train()
 
 

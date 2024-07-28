@@ -15,31 +15,6 @@ import torchmetrics
 import time
 import cv2
 
-# Load configuration
-try:
-  with open("config/config_HM_FCN.yaml", "r") as f:
-    config = yaml.safe_load(f)
-except FileNotFoundError:
-  print("Error: Configuration file 'config.yaml' not found!")
-  # Handle the error or use default values
-
-file_path_input = config["file_path_input"]
-file_path_output = config["file_path_output"]
-training_image_size = config["training_image_size"]
-criterion = config["criterion"]
-optimizer = config["optimiser"]
-num_classes = config["num_classes"]
-batch_size = config["batch_size"]
-num_epochs = config["num_epochs"]
-dict = config["dict"]
-lower_bound_threshold = config["lower_bound_threshold"]
-upper_bound_threshold = config["upper_bound_threshold"]
-learning_rate = config["learning_rate"]
-momentum = config["momentum"]
-betas = config["betas"]
-alpha = config["alpha"]
-rho = config["rho"]
-
 class SocialHeatMapFCN(nn.Module):
     def __init__(self):
         super(SocialHeatMapFCN, self).__init__()
@@ -219,8 +194,36 @@ def addFilesToDataset(matching_files,dataset):
             print(f"Pairs for files with number {file_number}:")
             loadIntoDataset(pairs,dataset)
 
-if __name__ == "__main__":
+def loadConfig():
+        # Load configuration
+    try:
+        with open("ml_pipeline_package/config/config_HM_FCN.yaml", "r") as f:
+            config = yaml.safe_load(f)
+            return config
+    except FileNotFoundError:
+        print("Error: Configuration file 'config.yaml' not found!")
+    # Handle the error or use default values
 
+def train():
+    config = loadConfig()
+
+    file_path_input = config["file_path_input"]
+    file_path_output = config["file_path_output"]
+    training_image_size = config["training_image_size"]
+    criterion = config["criterion"]
+    optimizer = config["optimiser"]
+    num_classes = config["num_classes"]
+    batch_size = config["batch_size"]
+    num_epochs = config["num_epochs"]
+    dict = config["dict"]
+    lower_bound_threshold = config["lower_bound_threshold"]
+    upper_bound_threshold = config["upper_bound_threshold"]
+    learning_rate = config["learning_rate"]
+    momentum = config["momentum"]
+    betas = config["betas"]
+    alpha = config["alpha"]
+    rho = config["rho"]
+        
     # Define transformations
     transform = transforms.Compose([
     transforms.ToPILImage(),
@@ -312,3 +315,6 @@ if __name__ == "__main__":
 
     accuracy = accuracy.compute()
     print(f"Evaluation Accuracy: {accuracy}")
+
+if __name__ == "__main__":
+    train()

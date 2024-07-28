@@ -82,11 +82,12 @@ class SocialHeatMapFCN(nn.Module):
         x = self.softmax(x)
         
         return x
-    
+   
 class HMDataset(Dataset):
-    def __init__(self) -> None:
+    def __init__(self, transform=None) -> None:
         self.data = []
         self.labels = []
+        self.transform = transform
 
     def __len__(self):
         return len(self.data)
@@ -94,6 +95,11 @@ class HMDataset(Dataset):
     def __getitem__(self, index):
         sample = self.data[index]
         label = self.labels[index]
+
+        if self.transform:
+            sample = self.transform(sample)
+            label = self.transform(label)
+            label = torch.round(label)
 
         label3Channels = one_hot_encode(label.squeeze(0))
 
@@ -123,20 +129,20 @@ class HMDataset(Dataset):
     def getLabels(self):
         return self.labels
 
-def socialMapToLabels(socialGridMap,lower_bound_threshold,upper_bound_threshold):
-    low_bound = lower_bound_threshold
-    high_bound = upper_bound_threshold
+def socialMapToLabels(socialGridMap):
+    low_bound = 0.1
+    high_bound = 0.5
 
     length = len(socialGridMap)
 
     for i in range(length):
         value = float(socialGridMap[i])
-        if value < low_bound:
-            socialGridMap[i] = 0.0
-        elif value > high_bound:
-            socialGridMap[i] = 2.0
+        if value < low_bound or math.isnan(value):
+            socialGridMap[i] = 0
+        elif value >= high_bound:
+            socialGridMap[i] = 2
         else:
-            socialGridMap[i] = 1.0
+            socialGridMap[i] = 1
 
     return socialGridMap
 
@@ -151,8 +157,7 @@ def one_hot_encode(data_tensor):
   one_hot[0] = torch.where(data_tensor == 0, 1.0, 0.0)  # Channel 0: Low activity
   one_hot[1] = torch.where(data_tensor == 1, 1.0, 0.0)  # Channel 1: Medium activity
   one_hot[2] = torch.where(data_tensor == 2, 1.0, 0.0)  # Channel 2: High activity
-  print(torch.sum(one_hot[2]))
-
+  
   return one_hot
 
 def loadFromTxt(sgmFilename,ogmFilename):
@@ -183,7 +188,7 @@ def loadIntoDataset(pairs,dataset):
         column_index = int(float(sgm[3]))
 
         data = ogm[4:]
-        labels = socialMapToLabels(sgm[4:],lower_bound_threshold,upper_bound_threshold)
+        labels = socialMapToLabels(sgm[4:])
 
         dataset.addData(data,labels,row_index,column_index)
 
@@ -191,6 +196,15 @@ def show_array_as_image(array):
   plt.imshow(array, cmap='gray')
   plt.colorbar()
   plt.show()
+
+def pad_array_to_shape(array, target_shape, pad_value=0):
+        # Calculate the padding amounts for each dimension
+    pad_width = [(target_shape[0] - array.shape[0], 0), (target_shape[1] - array.shape[1], 0)]
+
+    # Pad the array using np.pad
+    padded_array = np.pad(array, pad_width, mode='constant', constant_values=pad_value)
+
+    return padded_array
 
 def find_matching_files(folder_path):
     matching_files = {}
@@ -214,7 +228,42 @@ def addFilesToDataset(matching_files,dataset):
             print(f"Pairs for files with number {file_number}:")
             loadIntoDataset(pairs,dataset)
 
-if __name__ == "__main__":
+def loadConfig():
+        # Load configuration
+    try:
+        with open("ml_pipeline_package/config/config_HM_FCN.yaml", "r") as f:
+            config = yaml.safe_load(f)
+            return config
+    except FileNotFoundError:
+        print("Error: Configuration file 'config.yaml' not found!")
+    # Handle the error or use default values
+
+def train():
+    config = loadConfig()
+
+    file_path_input = config["file_path_input"]
+    file_path_output = config["file_path_output"]
+    training_image_size = config["training_image_size"]
+    criterion = config["criterion"]
+    optimizer = config["optimiser"]
+    num_classes = config["num_classes"]
+    batch_size = config["batch_size"]
+    num_epochs = config["num_epochs"]
+    dict = config["dict"]
+    lower_bound_threshold = config["lower_bound_threshold"]
+    upper_bound_threshold = config["upper_bound_threshold"]
+    learning_rate = config["learning_rate"]
+    momentum = config["momentum"]
+    betas = config["betas"]
+    alpha = config["alpha"]
+    rho = config["rho"]
+        
+    # Define transformations
+    transform = transforms.Compose([
+    transforms.ToPILImage(),
+    transforms.Resize((training_image_size[0], training_image_size[1]), interpolation=transforms.InterpolationMode.NEAREST),
+    transforms.ToTensor()
+    ])
 
     model = SocialHeatMapFCN() # Instantiate the model
 
@@ -254,7 +303,7 @@ if __name__ == "__main__":
     for file_number, files in matchingFiles.items():
         plateau_count = 0
         if 'socialGridMap' in files and 'obstacleGridMap' in files:
-            newDataset = HMDataset()
+            newDataset = HMDataset(transform=transform)
             sgmFilename = files['socialGridMap']
             ogmFilename = files['obstacleGridMap']
             pairs = loadFromTxt(sgmFilename, ogmFilename,)
@@ -300,4 +349,6 @@ if __name__ == "__main__":
 
     accuracy = accuracy.compute()
     print(f"Evaluation Accuracy: {accuracy}")
-    torch.save(model.state_dict(), file_path_output + "weightedfixedclassesChanged.pt")
+
+if __name__ == "__main__":
+    train()
