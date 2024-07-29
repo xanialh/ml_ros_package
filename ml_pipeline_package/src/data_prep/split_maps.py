@@ -46,3 +46,6 @@ def split():
     SGMFile.close()
     OGMFile.close()
     readFile.close()
+
+if __name__ == "__main__":
+    split()

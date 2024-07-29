@@ -200,7 +200,7 @@ def loadIntoDataset(pairs,dataset):
         column_index = int(float(sgm[3]))
 
         data = ogm[6:]
-        labels = socialMapToLabels(sgm[6:])
+        labels = socialMapToLabels(sgm[6:],lower_bound_threshold,upper_bound_threshold)
         coords = [ogm[4],ogm[5]]
 
 
