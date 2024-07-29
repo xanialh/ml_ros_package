@@ -1,3 +1,0 @@
-folder_path: "/home/danielhixson/socNavProject/ml_ros_package/ml_pipeline_package/data/office/without_coords/raw_maps"
-ogm_topic: "/grid_map_visualization/obstacles"
-sgm_topic: "/smf_move_base_mapper/social_grid_map"

@@ -173,7 +173,23 @@ def socialHeatDensityCreate(folderPathInput,folderPathOutput):
     matching_pairs = find_matching_files(folderPathInput)
     addFilesToDataset(matching_pairs,folderPathOutput)
 
-if __name__ == "__main__":
-    folderPathInput = "/home/danielhixson/socNavProject/ml_ros_package/ml_pipeline_package/data/maps_with_coords/maps_split_by_index/office"
-    folderPathOutput = "/home/danielhixson/socNavProject/ml_ros_package/ml_pipeline_package/data/maps_with_coords/maps_SDHM_cropped/office"
+def loadConfig():
+    # Load configuration
+    try:
+        with open("ml_pipeline_package/config/pipelineConfig.yaml", "r") as f:
+            config = yaml.safe_load(f)
+            return config
+    except FileNotFoundError:
+        print("Error: Configuration file 'config.yaml' not found!")
+    # Handle the error or use default values
+
+def main():
+    configFull = loadConfig()
+    config = configFull["create_SDHM_coords"]
+    folderPathInput = config["folderPathInput"]
+    folderPathOutput = config["folderPathOutput"]
     socialHeatDensityCreate(folderPathInput,folderPathOutput)
+    
+
+if __name__ == "__main__":
+    main()

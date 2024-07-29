@@ -231,7 +231,7 @@ def addFilesToDataset(matching_files,dataset):
 def loadConfig():
         # Load configuration
     try:
-        with open("ml_pipeline_package/config/config_HM_FCN.yaml", "r") as f:
+        with open("ml_pipeline_package/config/pipelineConfig.yaml", "r") as f:
             config = yaml.safe_load(f)
             return config
     except FileNotFoundError:

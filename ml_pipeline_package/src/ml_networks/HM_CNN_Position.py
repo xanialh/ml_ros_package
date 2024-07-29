@@ -246,7 +246,7 @@ def addFilesToDataset(matching_files,dataset):
 def loadConfig():
         # Load configuration
     try:
-        with open("ml_pipeline_package/config/config_HM_CNN_Position.yaml", "r") as f:
+        with open("ml_pipeline_package/config/pipelineConfig.yaml", "r") as f:
             config = yaml.safe_load(f)
             return config
     except FileNotFoundError:
@@ -369,7 +369,7 @@ def train():
 
     accuracy = accuracy.compute()
     print(f"Evaluation Accuracy: {accuracy}")
-    torch.save(model.state_dict(), file_path_output + "my_model123.pt")
+    torch.save(model.state_dict(), file_path_output + "onecfg.pt")
 
 if __name__ == "__main__":
     train()

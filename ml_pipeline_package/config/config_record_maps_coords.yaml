@@ -1,4 +1,0 @@
-folder_path: "data/maps_with_coords/raw_maps/office"
-ogm_topic: "/grid_map_visualization/obstacles"
-sgm_topic: "/smf_move_base_mapper/social_grid_map"
-odom_topic: "/pepper/odom_groundtruth"

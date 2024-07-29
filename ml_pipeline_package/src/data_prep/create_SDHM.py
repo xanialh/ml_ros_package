@@ -3,6 +3,7 @@ import csv
 import numpy as np
 import matplotlib.pyplot as plt
 import time
+import yaml
 
 def pad_array_to_shape(array, target_shape, pad_value=0):
         # Calculate the padding amounts for each dimension
@@ -169,7 +170,22 @@ def socialHeatDensityCreate(folderPathInput,folderPathOutput):
     matching_pairs = find_matching_files(folderPathInput)
     addFilesToDataset(matching_pairs,folderPathOutput)
 
-if __name__ == "__main__":
-    folderPathInput = "/home/danielhixson/socNavProject/ml_ros_package/ml_pipeline_package/data/office/eval/without_coords/split_maps"
-    folderPathOutput = "/home/danielhixson/socNavProject/ml_ros_package/ml_pipeline_package/data/office/eval/without_coords/cropped_maps"
+def loadConfig():
+    # Load configuration
+    try:
+        with open("ml_pipeline_package/config/pipelineConfig.yaml", "r") as f:
+            config = yaml.safe_load(f)
+            return config
+    except FileNotFoundError:
+        print("Error: Configuration file 'config.yaml' not found!")
+    # Handle the error or use default values
+
+def main():
+    configFull = loadConfig()
+    config = configFull["create_SDHM"]
+    folderPathInput = config["folderPathInput"]
+    folderPathOutput = config["folderPathOutput"]
     socialHeatDensityCreate(folderPathInput,folderPathOutput)
+    
+if __name__ == "__main__":
+    main()

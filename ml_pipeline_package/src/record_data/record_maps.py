@@ -7,24 +7,11 @@ import os
 from std_msgs.msg import Bool
 import yaml
 
-# Load configuration
-try:
-  with open("config/config_record_maps.yaml", "r") as f:
-    config = yaml.safe_load(f)
-except FileNotFoundError:
-  print("Error: Configuration file 'config.yaml' not found!")
-  # Handle the error or use default values
-
-folder_path = config["folder_path"]
-ogm_topic = config["ogm_topic"]
-sgm_topic = config["sgm_topic"]
-
-#social grid map has 1 as first element
-#obstacle grid map has 0 as first element
-
 class rosRecorder:
-    def __init__(self,i,datetimeRecording):
+    def __init__(self,i,datetimeRecording,folder_path,ogm_topic,sgm_topic):
         self.i = i
+        self.ogm_topic = ogm_topic
+        self.sgm_topic = sgm_topic
         self.datetimeRecording = datetimeRecording
         self.fileName = os.path.join(folder_path, str(self.i) + "_recording" + datetimeRecording + ".txt")
         self.file = open(self.fileName,"w")
@@ -142,7 +129,7 @@ class rosRecorder:
     
     def record(self):
             self.file.close()
-            topics = [ogm_topic, sgm_topic]
+            topics = [self.ogm_topic, self.sgm_topic]
 
             self.file = open(self.fileName,'a')
 
@@ -152,7 +139,10 @@ class rosRecorder:
 
 
 class dataCollector:
-    def __init__(self) -> None:
+    def __init__(self,folder_path,ogm_topic,sgm_topic) -> None:
+        self.folder_path = folder_path
+        self.ogm_topic = ogm_topic
+        self.sgm_topic = sgm_topic
         self.recordingFlag = True
         self.currentRecorder = None
         self.i = 0
@@ -169,7 +159,7 @@ class dataCollector:
             print("ith: " + str(self.i))
             try: 
                 print("New recorder made")
-                self.currentRecorder = rosRecorder(self.i,timeLog)
+                self.currentRecorder = rosRecorder(self.i,timeLog,self.folder_path,self.ogm_topic,self.sgm_topic)
                 self.currentRecorder.record()
 
                 while self.recordingFlag:
@@ -188,6 +178,31 @@ class dataCollector:
                     print("current recorder flag turned false")
                     self.currentRecorder = None  # Clear reference to stopped
 
-rospy.init_node("gridMapCollector")
-fileMaker = dataCollector()
-fileMaker.loop()
+
+def loadConfig():
+    # Load configuration
+    try:
+        with open("ml_pipeline_package/config/pipelineConfig.yaml", "r") as f:
+            config = yaml.safe_load(f)
+            return config
+    except FileNotFoundError:
+        print("Error: Configuration file 'config.yaml' not found!")
+    # Handle the error or use default values
+
+def main():
+    configFull = loadConfig()
+    config = configFull["record_maps"]
+
+    folder_path = config["folder_path"]
+    ogm_topic = config["ogm_topic"]
+    sgm_topic = config["sgm_topic"]
+
+    #social grid map has 1 as first element
+    #obstacle grid map has 0 as first element
+
+    rospy.init_node("gridMapCollector")
+    fileMaker = dataCollector(folder_path,ogm_topic,sgm_topic)
+    fileMaker.loop()
+
+if __name__ == "__main__":
+    main()
