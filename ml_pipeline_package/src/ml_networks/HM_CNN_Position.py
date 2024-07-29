@@ -254,8 +254,8 @@ def loadConfig():
     # Handle the error or use default values
 
 def train():
-    config = loadConfig()
-    print(config)
+    configFull = loadConfig()
+    config = configFull["HM_CNN_Position"]
 
     file_path_input = config["file_path_input"]
     file_path_output = config["file_path_output"]

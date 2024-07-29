@@ -1,0 +1,97 @@
+training_route:
+  map: "office"
+  num_waypoints: 1
+  waypoint_topic: "/pedsim_visualizer/waypoints"
+  goal_result_topic: "/smf_goto_action/result"
+  starting_position: [[-5,19],[-20,14],[14,14]]
+
+split_maps:
+  directory_path_input: "/home/danielhixson/socNavProject/ml_ros_package/ml_pipeline_package/data/office/eval/without_coords/raw_maps"
+  directory_path_output: "/home/danielhixson/socNavProject/ml_ros_package/ml_pipeline_package/data/office/eval/without_coords/split_maps"
+
+record_maps:
+  folder_path: "/home/danielhixson/socNavProject/ml_ros_package/ml_pipeline_package/data/office/without_coords/raw_maps"
+  ogm_topic: "/grid_map_visualization/obstacles"
+  sgm_topic: "/smf_move_base_mapper/social_grid_map"
+
+record_maps_coords:
+  folder_path: "data/maps_with_coords/raw_maps/office"
+  ogm_topic: "/grid_map_visualization/obstacles"
+  sgm_topic: "/smf_move_base_mapper/social_grid_map"
+  odom_topic: "/pepper/odom_groundtruth"
+
+HM_FCN:
+  file_path_input: "ml_pipeline_package/data/maps_without_coords/maps_SDHM_cropped/office"
+  file_path_output: "ml_pipeline_package/data/trained_models/office"
+  training_image_size: [128,128]
+  criterion: 1
+  optimiser: 2
+  num_classes: 3
+  batch_size: 6
+  num_epochs: 50
+  dict: 1
+  lower_bound_threshold: 100
+  upper_bound_threshold: 700
+  learning_rate: 0.001
+  momentum: 0.9
+  betas: [0.9, 0.999]
+  alpha: 0.9
+  rho: 0.9
+
+HM_FCNv2:
+  file_path_input: "ml_pipeline_package/data/maps_without_coords/maps_SDHM_cropped/office"
+  file_path_output: "ml_pipeline_package/data/trained_models/office"
+  training_image_size: [128,128]
+  criterion: 1
+  optimiser: 2
+  num_classes: 3
+  batch_size: 6
+  num_epochs: 50
+  dict: 1
+  lower_bound_threshold: 100
+  upper_bound_threshold: 700
+  learning_rate: 0.001
+  momentum: 0.9
+  betas: [0.9, 0.999]
+  alpha: 0.9
+  rho: 0.9
+
+HM_CNN_Position:
+  file_path_input: "ml_pipeline_package/data/maps_with_coords/maps_SDHM_cropped/office"
+  file_path_output: "ml_pipeline_package/data/trained_models"
+  training_image_size: [128,128]
+  criterion: 1
+  optimiser: 3
+  num_classes: 3
+  batch_size: 12
+  num_epochs: 2
+  dict: 1
+  lower_bound_threshold: 100
+  upper_bound_threshold: 700
+  learning_rate: 0.001
+  momentum: 0.9
+  betas: [0.9, 0.999]
+  alpha: 0.9
+  rho: 0.9
+
+
+HM_CNN_Positionv2:
+  file_path_input: "ml_pipeline_package/data/maps_with_coords/maps_SDHM_cropped/office"
+  file_path_output: "ml_pipeline_package/data/trained_models/office"
+  training_image_size: [128,128]
+  criterion: 1
+  optimiser: 3
+  num_classes: 3
+  batch_size: 12
+  num_epochs: 2
+  dict: 1
+  lower_bound_threshold: 100
+  upper_bound_threshold: 700
+  learning_rate: 0.001
+  momentum: 0.9
+  betas: [0.9, 0.999]
+  alpha: 0.9
+  rho: 0.9
+
+
+

@@ -239,7 +239,8 @@ def loadConfig():
     # Handle the error or use default values
 
 def train():
-    config = loadConfig()
+    configFull = loadConfig()
+    config = configFull["HM_FCNv2"]
 
     file_path_input = config["file_path_input"]
     file_path_output = config["file_path_output"]

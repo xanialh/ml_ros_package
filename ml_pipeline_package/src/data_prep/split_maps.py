@@ -13,7 +13,8 @@ def loadConfig():
     # Handle the error or use default values
 
 def split():
-    config = loadConfig()
+    configFull = loadConfig()
+    config = configFull["split_maps"]
 
     directory_path_input = config["directory_path_input"]
     directory_path_output = config["directory_path_output"]

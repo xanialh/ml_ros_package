@@ -13,11 +13,13 @@ import yaml
 
 # Load configuration
 try:
-  with open("/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/config/config_training_route.yaml", "r") as f:
-    config = yaml.safe_load(f)
+  with open("ml_pipeline_package/config/pipelineConfig.yaml", "r") as f:
+    configFull = yaml.safe_load(f)
 except FileNotFoundError:
   print("Error: Configuration file 'config.yaml' not found!")
   # Handle the error or use default values
+
+config = configFull["training_route"]  
 
 map = config["map"]
 num_waypoints = config["num_waypoints"]
