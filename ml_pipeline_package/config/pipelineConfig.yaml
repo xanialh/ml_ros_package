@@ -1,12 +1,12 @@
 training_route:
-  map: "office"
+  map: "bookstore"
   num_waypoints: 1
   waypoint_topic: "/pedsim_visualizer/waypoints"
   goal_result_topic: "/smf_goto_action/result"
   starting_position: [[-5,19],[-20,14],[14,14]]
 
 record_maps:
-  folder_path: "/home/danielhixson/socNavProject/ml_ros_package/ml_pipeline_package/data/office/without_coords/raw_maps"
+  folder_path: "/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/bookstore/raw_maps/without_coords"
   ogm_topic: "/grid_map_visualization/obstacles"
   sgm_topic: "/smf_move_base_mapper/social_grid_map"
 
@@ -28,7 +28,7 @@ create_SDHM_coords:
   folderPathInput: "/home/danielhixson/socNavProject/ml_ros_package/ml_pipeline_package/data/office/eval/without_coords/split_maps"
   folderPathOutput: "/home/danielhixson/socNavProject/ml_ros_package/ml_pipeline_package/data/office/eval/without_coords/cropped_maps"
 
-HM_FCN:
+FCNv1:
   file_path_input: "ml_pipeline_package/data/maps_without_coords/maps_SDHM_cropped/office"
   file_path_output: "ml_pipeline_package/data/trained_models/office"
   training_image_size: [128,128]
@@ -46,7 +46,7 @@ HM_FCN:
   alpha: 0.9
   rho: 0.9
 
-HM_FCNv2:
+FCNv2:
   file_path_input: "ml_pipeline_package/data/maps_without_coords/maps_SDHM_cropped/office"
   file_path_output: "ml_pipeline_package/data/trained_models/office"
   training_image_size: [128,128]
@@ -64,7 +64,7 @@ HM_FCNv2:
   alpha: 0.9
   rho: 0.9
 
-HM_CNN_Position:
+CNNv1:
   file_path_input: "ml_pipeline_package/data/maps_with_coords/maps_SDHM_cropped/office"
   file_path_output: "ml_pipeline_package/data/trained_models"
   training_image_size: [128,128]
@@ -82,7 +82,7 @@ HM_CNN_Position:
   alpha: 0.9
   rho: 0.9
 
-HM_CNN_Positionv2:
+CNNv2:
   file_path_input: "ml_pipeline_package/data/maps_with_coords/maps_SDHM_cropped/office"
   file_path_output: "ml_pipeline_package/data/trained_models/office"
   training_image_size: [128,128]

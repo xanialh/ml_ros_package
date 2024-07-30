@@ -13,7 +13,7 @@ class rosRecorder:
         self.ogm_topic = ogm_topic
         self.sgm_topic = sgm_topic
         self.datetimeRecording = datetimeRecording
-        self.fileName = os.path.join(folder_path, str(self.i) + "_recording" + datetimeRecording + ".txt")
+        self.fileName = os.path.join(folder_path, str(self.i) + "_recording_" + datetimeRecording + ".txt")
         self.file = open(self.fileName,"w")
         print("New file made")
         self.recordingFlag = True
