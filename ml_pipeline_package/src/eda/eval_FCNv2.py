@@ -183,7 +183,7 @@ def addFilesToDataset(matching_files,dataset):
             loadIntoDataset(pairs,dataset)
 
 def train():
-    model = load_model("/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/trained_models/officeredoneweightedHMFCNv2.pt")
+    model = load_model("/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/trained_models/office/officeredoneweightedHMFCNv2.pt")
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 

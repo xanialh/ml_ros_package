@@ -6,7 +6,7 @@ import numpy as np
 import os
 from std_msgs.msg import Bool
 import yaml
-from HM_FCNv2 import SocialHeatMapFCN
+from FCNv2 import SocialHeatMapFCN
 import torch
 import torch.nn as nn
 import torch.optim as optim

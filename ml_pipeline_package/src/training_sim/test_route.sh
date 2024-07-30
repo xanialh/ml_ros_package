@@ -1,5 +1,5 @@
 #!/bin/bash
-for i in $(seq 1 115)
+for i in $(seq 1 31)
 do
     echo "========================================================\n"
     echo "This is the $i th run\n"

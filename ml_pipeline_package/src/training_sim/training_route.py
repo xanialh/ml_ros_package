@@ -29,6 +29,7 @@ num_waypoints = config["num_waypoints"]
 waypoint_topic = config["waypoint_topic"]
 goal_result_topic = config["goal_result_topic"]
 starting_position = config["starting_position"]
+max_route_time = config["max_route_time"]
 start_position = random.choice(starting_position)
 
 PROCESS_GENERATE_RUNNING = True
@@ -120,7 +121,7 @@ goal_listener = rospy.Subscriber(
 )
 
 # max time ros param
-rospy.set_param("/metrics_recorder_node/max_test_time",400)
+rospy.set_param("/metrics_recorder_node/max_test_time",max_route_time)
 current_time = 0
 flag = True
 
@@ -157,7 +158,7 @@ while (flag):
             # set waypoints for robot
 
         # raise time to allow robot to reach next waypoint
-        rospy.set_param("/metrics_recorder_node/max_test_time",400+current_time)
+        rospy.set_param("/metrics_recorder_node/max_test_time",max_route_time+current_time)
         
         # set new waypoint
         new_goal = waypoints.pop(0)
