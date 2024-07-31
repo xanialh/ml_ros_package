@@ -139,13 +139,14 @@ class rosRecorder:
 
 
 class dataCollector:
-    def __init__(self,folder_path,ogm_topic,sgm_topic) -> None:
+    def __init__(self,folder_path,ogm_topic,sgm_topic,max_files) -> None:
         self.folder_path = folder_path
         self.ogm_topic = ogm_topic
         self.sgm_topic = sgm_topic
         self.recordingFlag = True
         self.currentRecorder = None
         self.i = 0
+        self.max_files = max_files
         rospy.Subscriber("/routeEnd",Bool,callback=self.endRecorderCallback,queue_size=10)
 
     def endRecorderCallback(self,msg):
@@ -158,6 +159,9 @@ class dataCollector:
             self.i = self.i + 1
             print("ith: " + str(self.i))
             try: 
+                if self.i > self.max_files:
+                    print("Maximum number of files reached")
+                    break
                 print("New recorder made")
                 self.currentRecorder = rosRecorder(self.i,timeLog,self.folder_path,self.ogm_topic,self.sgm_topic)
                 self.currentRecorder.record()
@@ -196,12 +200,14 @@ def main():
     folder_path = config["folder_path"]
     ogm_topic = config["ogm_topic"]
     sgm_topic = config["sgm_topic"]
+    max_files = config["max_files"]
+    
 
     #social grid map has 1 as first element
     #obstacle grid map has 0 as first element
 
     rospy.init_node("gridMapCollector")
-    fileMaker = dataCollector(folder_path,ogm_topic,sgm_topic)
+    fileMaker = dataCollector(folder_path,ogm_topic,sgm_topic,max_files)
     fileMaker.loop()
 
 if __name__ == "__main__":

@@ -147,8 +147,6 @@ while (flag):
 
     # goal reached branch
     if goal_reached or (current_time>max_test_time):
-        
-
         if len(waypoints) == 0:
             flag = False
             break
@@ -181,7 +179,7 @@ while (flag):
 
 rospy.sleep(1)
 
-# stop recording 
+# stop recording (just to make sure)
 recordPub.publish(msgEnd)
 
 #end

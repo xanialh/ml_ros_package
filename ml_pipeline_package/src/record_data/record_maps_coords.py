@@ -8,54 +8,33 @@ from std_msgs.msg import Bool
 from nav_msgs.msg import Odometry
 import yaml
 
-class rosRecorder:
-    def __init__(self,i,datetimeRecording,folder_path,ogm_topic,sgm_topic,odom_topic):
+class ros_recorder:
+    def __init__(self,i,datetime_recording,folder_path,ogm_topic,sgm_topic,odom_topic):
         self.i = i
         self.ogm_topic = ogm_topic
         self.sgm_topic = sgm_topic
         self.odom_topic = odom_topic
-        self.datetimeRecording = datetimeRecording
-        self.fileName = os.path.join(folder_path, str(self.i) + "_recording_" + datetimeRecording + ".txt")
-        self.file = open(self.fileName,"w")
+        self.datetime_recording = datetime_recording
+        self.file_name = os.path.join(folder_path, str(self.i) + "_recording_" + datetime_recording + ".txt")
+        self.file = open(self.file_name,"w")
         print("New file made")
-        self.recordingFlag = True
-        self.ogmSub = None
-        self.sgmSub = None
+        self.recording_flag = True
+        self.ogm_sub = None
+        self.sgm_sub = None
         self.odom_x = None
         self.odom_y = None
 
-    def setRecordingFlag(self,value):
-        self.recordingFlag = False
+    def set_recording_flag(self,value):
+        self.recording_flag = False
         if value == False:
             self.file.close()
             print("file closed")
-            if self.ogmSub is not None:
-                self.ogmSub.unregister()
-            if self.sgmSub is not None:
-                self.sgmSub.unregister()
+            if self.ogm_sub is not None:
+                self.ogm_sub.unregister()
+            if self.sgm_sub is not None:
+                self.sgm_sub.unregister()
     
     def s_gridmap_callback(self,msg,appendFile):
-        '''
-    info.header.seq
-    info.header.stamp.secs
-    info.header.stamp.nsecs
-    info.header.frame_id
-    info.resolution
-    info.length_x
-    info.length_y
-    info.pose.position.x
-    info.pose.position.y
-    info.pose.position.z
-    info.pose.orientation.x
-    info.pose.orientation.y
-    info.pose.orientation.z
-    info.pose.orientation.w
-    layers
-    basic_layers
-    data
-    outer_start_index
-    inner_start_index
-    '''
         layers_copy = msg.layers.copy()
         # Extract data from the 'social' layer
         social_heatmap_data = None
@@ -88,7 +67,6 @@ class rosRecorder:
             positions[1] = self.odom_y
 
         positions_array = np.array(positions)
-        print(positions_array) 
 
         numpy_array = np.insert(data_array,0,positions_array)
 
@@ -103,27 +81,6 @@ class rosRecorder:
         print("S WROTE: "+ str(sequence))
 
     def o_gridmap_callback(self,msg,appendFile):
-        '''
-    header.seq
-    header.stamp.secs
-    header.stamp.nsecs
-    header.frame_id
-    info.map_load_time.secs
-    info.map_load_time.nsecs
-    info.resolution
-    info.width
-    info.height
-    info.origin.position.x
-    info.origin.position.y
-    info.origin.position.z
-    info.origin.orientation.x
-    info.origin.orientation.y
-    info.origin.orientation.z
-    info.origin.orientation.w
-    data
-    '''
-
-
         data = msg.data
         column_index = msg.info.width
         row_index = msg.info.height
@@ -156,31 +113,31 @@ class rosRecorder:
         self.odom_x = msg.pose.pose.position.x
         self.odom_y = msg.pose.pose.position.y
 
-    
     def record(self):
             self.file.close()
             topics = [self.ogm_topic, self.sgm_topic,self.odom_topic]
+ 
+            self.file = open(self.file_name,'a')
 
-            self.file = open(self.fileName,'a')
-
-            self.ogmSub = rospy.Subscriber(topics[0], OccupancyGrid, self.o_gridmap_callback,callback_args=self.file)
-            self.sgmSub = rospy.Subscriber(topics[1], GridMap, self.s_gridmap_callback,callback_args=self.file)
+            self.ogm_sub = rospy.Subscriber(topics[0], OccupancyGrid, self.o_gridmap_callback,callback_args=self.file)
+            self.sgm_sub = rospy.Subscriber(topics[1], GridMap, self.s_gridmap_callback,callback_args=self.file)
             self.coords = rospy.Subscriber(topics[2], Odometry, self.coords_callback)
 
 class dataCollector:
-    def __init__(self,folder_path,ogm_topic,sgm_topic,odom_topic) -> None:
+    def __init__(self,folder_path,ogm_topic,sgm_topic,odom_topic,max_files) -> None:
         self.folder_path = folder_path
         self.ogm_topic = ogm_topic
         self.sgm_topic = sgm_topic
         self.odom_topic = odom_topic
-        self.recordingFlag = True
+        self.recording_flag = True
         self.currentRecorder = None
         self.i = 0
+        self.max_files = max_files
         rospy.Subscriber("/routeEnd",Bool,callback=self.endRecorderCallback,queue_size=10)
 
     def endRecorderCallback(self,msg):
         booleanValue = bool(msg.data)
-        self.recordingFlag = booleanValue
+        self.recording_flag = booleanValue
 
     def loop(self):
         timeLog = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
@@ -188,23 +145,26 @@ class dataCollector:
             self.i = self.i + 1
             print("ith: " + str(self.i))
             try: 
+                if self.i > self.max_files:
+                    print("Maximum number of files reached")
+                    break
                 print("New recorder made")
-                self.currentRecorder = rosRecorder(self.i,timeLog,self.folder_path,self.ogm_topic,self.sgm_topic,self.odom_topic)
+                self.currentRecorder = ros_recorder(self.i,timeLog,self.folder_path,self.ogm_topic,self.sgm_topic,self.odom_topic)
                 self.currentRecorder.record()
 
-                while self.recordingFlag:
+                while self.recording_flag:
                     rospy.sleep(1)
 
                 print("route end flag flipped")    
 
-                self.currentRecorder.setRecordingFlag(False)
+                self.currentRecorder.set_recording_flag(False)
                 print("Recorder flag flipped")
                 self.currentRecorder = None
                 print("Recorder successfully ended")
             except Exception as e:
                 print(e)
                 if self.currentRecorder:
-                    self.currentRecorder.setRecordingFlag(False)
+                    self.currentRecorder.set_recording_flag(False)
                     print("current recorder flag turned false")
                     self.currentRecorder = None  # Clear reference to stopped
 
@@ -228,12 +188,13 @@ def main():
     ogm_topic = config["ogm_topic"]
     sgm_topic = config["sgm_topic"]
     odom_topic = config["odom_topic"]
+    max_files = config["max_files"]
 
 #social grid map has 1 as first element
 #obstacle grid map has 0 as first element
 
-    rospy.init_node("rosbagDataCollector")
-    fileMaker = dataCollector(folder_path,ogm_topic,sgm_topic,odom_topic)
+    rospy.init_node("gridMapCoordCollector")
+    fileMaker = dataCollector(folder_path,ogm_topic,sgm_topic,odom_topic,max_files)
     fileMaker.loop()
 
 
