@@ -1,22 +1,22 @@
 training_route:
-  map: "small_house"
+  map: "small_warehouse"
   num_waypoints: 1
   waypoint_topic: "/pedsim_visualizer/waypoints"
   goal_result_topic: "/smf_goto_action/result"
-  max_route_time: 90
-  starting_position: [[7.36, -2.11],
-    [-0.29, 2.71],
-    [-7.82, 0],
-    [-8.1, -2.86],
-    [-1.66, -3.89]]
+  max_route_time: 120
+  starting_position: [[0.9, 7.09],
+    [-3.32, 8.55],
+    [-3.47, -8.69],
+    [1.47, -8.55],
+    [6.0, 2.09]]
 
 record_maps:
-  folder_path: "/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/small_house/raw_maps/without_coords"
+  folder_path: "/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/small_warehouse/raw_maps/without_coords"
   ogm_topic: "/grid_map_visualization/obstacles"
   sgm_topic: "/smf_move_base_mapper/social_grid_map"
 
 record_maps_coords:
-  folder_path: "/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/small_house/raw_maps/with_coords"
+  folder_path: "/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/small_warehouse/raw_maps/with_coords"
   ogm_topic: "/grid_map_visualization/obstacles"
   sgm_topic: "/smf_move_base_mapper/social_grid_map"
   odom_topic: "/pepper/odom_groundtruth"
