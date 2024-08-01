@@ -17,33 +17,6 @@ import PIL
 
 import matplotlib.pyplot as plt
 
-# Load configuration
-try:
-  with open("ml_pipeline_package/config/pipelineConfig.yaml", "r") as f:
-    configFull = yaml.safe_load(f)
-except FileNotFoundError:
-  print("Error: Configuration file 'config.yaml' not found!")
-  # Handle the error or use default values
-
-config = configFull["FCNv2"]
-
-file_path_input = config["file_path_input"]
-file_path_output = config["file_path_output"]
-training_image_size = config["training_image_size"]
-criterion = config["criterion"]
-optimizer = config["optimiser"]
-num_classes = config["num_classes"]
-batch_size = config["batch_size"]
-num_epochs = config["num_epochs"]
-dict = config["dict"]
-lower_bound_threshold = config["lower_bound_threshold"]
-upper_bound_threshold = config["upper_bound_threshold"]
-learning_rate = config["learning_rate"]
-momentum = config["momentum"]
-betas = config["betas"]
-alpha = config["alpha"]
-rho = config["rho"]
-
 class SocialHeatMapFCN(nn.Module):
     def __init__(self):
         super(SocialHeatMapFCN, self).__init__()
@@ -60,7 +33,6 @@ class SocialHeatMapFCN(nn.Module):
             nn.ReLU(inplace=True),
             nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, padding=1),
             nn.MaxPool2d(kernel_size=2, stride=2),
-            nn.Dropout(p=0.2)  # Add dropout with probability 0.5
         )
         
         # Decoder (upsampling)
@@ -192,9 +164,9 @@ def find_matching_files(folder_path):
     matching_files = {}
     for file in os.listdir(folder_path):
         split_file = file.split("_")
-        if len(split_file) == 4 and split_file[3].endswith(".txt"):
+        if len(split_file) == 5 and split_file[4].endswith(".txt"):
             file_number = split_file[0]
-            map_type = split_file[3].split(".")[0]
+            map_type = split_file[4].split(".")[0]
             if map_type in ["socialGridMap", "obstacleGridMap"]:
                 if file_number not in matching_files:
                     matching_files[file_number] = {}
@@ -232,23 +204,20 @@ def train():
     alpha = config["alpha"]
     rho = config["rho"]
 
-    print(training_image_size)
-    print("@@@@@@@@")
-
     model = SocialHeatMapFCN() # Instantiate the model
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     model = SocialHeatMapFCN().to(device)
 
-    accuracy = torchmetrics.Accuracy(task="multiclass",num_classes=num_classes)
+    accuracy = torchmetrics.Accuracy(task="multiclass",num_classes=3)
     accuracy = accuracy.to(device)
-
+    
         # Example confusion matrix
     confusion_matrix = np.array([
-        [14367893,      869,    53509],
-        [  336779,       31,     2548],
-        [   97568,        7,     1084]
+        [4435014,  236474,   37364],
+        [ 464107,  101841,   13799],
+        [ 119221,   30298,   17754]
     ])
 
     # Calculate class frequencies
@@ -291,56 +260,54 @@ def train():
     prev_loss = float('inf')  # Initialize with a high value
     plateau_tolerance = 25
 
+    newDataset = HMDataset()
+
     for file_number, files in matchingFiles.items():
         plateau_count = 0
         if 'socialGridMap' in files and 'obstacleGridMap' in files:
-            newDataset = HMDataset()
             sgmFilename = files['socialGridMap']
             ogmFilename = files['obstacleGridMap']
             pairs = loadFromTxt(sgmFilename, ogmFilename,)
             print(f"file number: {file_number}")
             loadIntoDataset(pairs,newDataset,training_image_size)
 
-            newDataLoader = DataLoader(newDataset,batch_size=batch_size,shuffle=True)
+    newDataLoader = DataLoader(newDataset,batch_size=batch_size,shuffle=True)
 
-            stop = False
+    stop = False
 
-            for epoch in range(num_epochs):
-            # Iterate over the dataset
-                if stop != True:
-                    for inputs, labels in newDataLoader:
-                        inputs = inputs.to(device)
-                        labels = labels.to(device)
-                    # Forward pass
-                        outputs = model(inputs)
-                    # Compute the loss
-                        loss = criterion(outputs, labels)
-                        print(loss.item())
+    for epoch in range(num_epochs):
+    # Iterate over the dataset
+        if stop != True:
+            for inputs, labels in newDataLoader:
+                inputs = inputs.to(device)
+                labels = labels.to(device)
+            # Forward pass
+                outputs = model(inputs)
+            # Compute the loss
+                loss = criterion(outputs, labels)
+                print(loss.item())
 
-                        if abs(prev_loss - loss.item()) > tolerance:
-                            prev_loss = loss.item()  # Update previous loss
-                            plateau_count = 0  # Reset plateau counter if improvement detected
-                        else:
-                            plateau_count += 1  # Increment counter if loss plateaus
-                        # Move to next file if plateau_tolerance is reached
-                        if plateau_count >= plateau_tolerance:
-                            print(f"Loss plateaued for {plateau_tolerance} epochs. Moving to next file.")
-                            stop = True
-                    # Backward pass and optimization
-                        optimizer.zero_grad()
-                        loss.backward()
-                        optimizer.step()
+                if abs(prev_loss - loss.item()) > tolerance:
+                    prev_loss = loss.item()  # Update previous loss
+                    plateau_count = 0  # Reset plateau counter if improvement detected
+                else:
+                    plateau_count += 1  # Increment counter if loss plateaus
+                # Move to next file if plateau_tolerance is reached
+                if plateau_count >= plateau_tolerance:
+                    print(f"Loss plateaued for {plateau_tolerance} epochs. Moving to next file.")
+                    stop = True
+            # Backward pass and optimization
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
 
-                        accuracy.update(outputs,labels)
-
-            del newDataset
-            del newDataLoader
+                accuracy.update(outputs,labels)
 
     time.sleep(5)
 
     accuracy = accuracy.compute()
     print(f"Evaluation Accuracy: {accuracy}")
-    torch.save(model.state_dict(), file_path_output + "changedlabels+newweightedHMFCNv2.pt")
+    torch.save(model.state_dict(), file_path_output + "FCNv2loadeverythingweights+batch32.pt")
 
 def visualize_label_tensor(tensor, title='Label Tensor'):
     # Convert tensor to numpy array

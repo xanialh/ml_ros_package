@@ -197,9 +197,9 @@ def find_matching_files(folder_path):
     matching_files = {}
     for file in os.listdir(folder_path):
         split_file = file.split("_")
-        if len(split_file) == 4 and split_file[3].endswith(".txt"):
+        if len(split_file) == 5 and split_file[4].endswith(".txt"):
             file_number = split_file[0]
-            map_type = split_file[3].split(".")[0]
+            map_type = split_file[4].split(".")[0]
             if map_type in ["socialGridMap", "obstacleGridMap"]:
                 if file_number not in matching_files:
                     matching_files[file_number] = {}

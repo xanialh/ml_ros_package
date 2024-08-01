@@ -220,35 +220,32 @@ def train():
             print(f"file number: {file_number}")
             loadIntoDataset(pairs,newDataset)
 
-            newDataLoader = DataLoader(newDataset,batch_size=6,shuffle=True)
+    newDataLoader = DataLoader(newDataset,batch_size=6,shuffle=True)
 
-            stop = False
-            with torch.no_grad():
-                for inputs, labels in newDataLoader:
-                    inputs = inputs.to(device)
-                    labels = labels.to(device)
-                    # Forward pass
-                    outputs = model(inputs)
-                    print(outputs.size())
-                    #print("**************")
-                    pred_classes = torch.argmax(outputs, dim=1)
-                    print(labels.size())
-                    # Compute the loss
-                    loss = criterion(outputs, labels)
-                    print(loss.item())
-                    total_loss += loss.item()
-                    num_samples += 1
-                    mse.update(pred_classes ,labels)
-                    mae.update(pred_classes ,labels)
-                    iou.update(pred_classes ,labels)
-                    precision.update(pred_classes ,labels)
-                    accuracy.update(pred_classes ,labels)
-                    f1.update(pred_classes ,labels)
-                    recall.update(pred_classes ,labels)
-                    confusion_matrix.update(pred_classes , labels)
-
-        del newDataset
-        del newDataLoader
+    stop = False
+    with torch.no_grad():
+        for inputs, labels in newDataLoader:
+            inputs = inputs.to(device)
+            labels = labels.to(device)
+            # Forward pass
+            outputs = model(inputs)
+            print(outputs.size())
+            #print("**************")
+            pred_classes = torch.argmax(outputs, dim=1)
+            print(labels.size())
+            # Compute the loss
+            loss = criterion(outputs, labels)
+            print(loss.item())
+            total_loss += loss.item()
+            num_samples += 1
+            mse.update(pred_classes ,labels)
+            mae.update(pred_classes ,labels)
+            iou.update(pred_classes ,labels)
+            precision.update(pred_classes ,labels)
+            accuracy.update(pred_classes ,labels)
+            f1.update(pred_classes ,labels)
+            recall.update(pred_classes ,labels)
+            confusion_matrix.update(pred_classes , labels)
 
     time.sleep(5)
 

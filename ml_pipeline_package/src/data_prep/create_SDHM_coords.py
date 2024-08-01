@@ -3,6 +3,7 @@ import csv
 import numpy as np
 import matplotlib.pyplot as plt
 import time
+import yaml
 
 def pad_array_to_shape(array, target_shape, pad_value=0):
         # Calculate the padding amounts for each dimension
@@ -107,13 +108,15 @@ def loadFromTxt(sgmFilename,ogmFilename,aggregation_method="sum"):
             padded_ogm_array = pad_array_to_shape(reshape_obstacleGridMap,(largest_height, largest_width),0)
             padded_ogm_array = padded_ogm_array.astype(float)
 
+            cropped_social_grid = reshape_final_social_grid[:height, :width]
+
             padded_ogm_array = np.ravel(padded_ogm_array)
             ogmFront = np.array([0,ogm_header,largest_height,largest_width,x,y])
             ogm = np.concatenate((ogmFront,padded_ogm_array))
             ogmList = ogm.tolist()
 
             sgmFront = np.array([1,ogm_header,largest_height,largest_width,largest_x,largest_y])
-            sgm = np.concatenate((sgmFront,reshape_final_social_grid))
+            sgm = np.concatenate((sgmFront,cropped_social_grid.ravel()))
             sgmList = sgm.tolist()
 
             new_pairs.append((sgmList,ogmList))
@@ -123,9 +126,9 @@ def find_matching_files(folder_path):
     matching_files = {}
     for file in os.listdir(folder_path):
         split_file = file.split("_")
-        if len(split_file) == 4 and split_file[3].endswith(".txt"):
+        if len(split_file) == 5 and split_file[4].endswith(".txt"):
             file_number = split_file[0]
-            map_type = split_file[3].split(".")[0]
+            map_type = split_file[4].split(".")[0]
             if map_type in ["socialGridMap", "obstacleGridMap"]:
                 if file_number not in matching_files:
                     matching_files[file_number] = {}

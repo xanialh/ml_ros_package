@@ -24,12 +24,12 @@ record_maps_coords:
   max_files: 30
 
 split_maps:
-  directory_path_input: "/home/danielhixson/socNavProject/ml_ros_package/ml_pipeline_package/data/office/eval/without_coords/raw_maps"
-  directory_path_output: "/home/danielhixson/socNavProject/ml_ros_package/ml_pipeline_package/data/office/eval/without_coords/split_maps"
+  directory_path_input: "/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/bookstore/raw_maps/without_coords"
+  directory_path_output: "/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/bookstore/split_maps/without_coords"
 
 create_SDHM:
-  folderPathInput: "/home/danielhixson/socNavProject/ml_ros_package/ml_pipeline_package/data/office/eval/without_coords/split_maps"
-  folderPathOutput: "/home/danielhixson/socNavProject/ml_ros_package/ml_pipeline_package/data/office/eval/without_coords/cropped_maps"
+  folderPathInput: "/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/bookstore/split_maps/without_coords"
+  folderPathOutput: "/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/bookstore/final_maps/without_coords"
 
 create_SDHM_coords:
   folderPathInput: "/home/danielhixson/socNavProject/ml_ros_package/ml_pipeline_package/data/office/eval/without_coords/split_maps"
@@ -54,13 +54,13 @@ FCNv1:
   rho: 0.9
 
 FCNv2:
-  file_path_input: "ml_pipeline_package/data/maps_without_coords/maps_SDHM_cropped/office"
-  file_path_output: "ml_pipeline_package/data/trained_models/office"
-  training_image_size: [512,512]
+  file_path_input: "/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/bookstore/final_maps/without_coords"
+  file_path_output: "ml_pipeline_package/data/trained_models/bookstore/"
+  training_image_size: [128,128]
   criterion: 1
   optimiser: 2
   num_classes: 3
-  batch_size: 6
+  batch_size: 32
   num_epochs: 50
   dict: 1
   lower_bound_threshold: 100

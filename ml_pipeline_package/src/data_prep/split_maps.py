@@ -5,7 +5,7 @@ import yaml
 def loadConfig():
     # Load configuration
     try:
-        with open("ml_pipeline_package/config/pipelineConfig.yaml", "r") as f:
+        with open("/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/config/pipelineConfig.yaml", "r") as f:
             config = yaml.safe_load(f)
             return config
     except FileNotFoundError:

@@ -15,7 +15,7 @@ def pad_array_to_shape(array, target_shape, pad_value=0):
     return padded_array
 
 def show_array_as_image(array):
-  plt.imshow(array, cmap='gray')
+  plt.imshow(array, cmap='viridis')
   plt.colorbar()
   plt.show()
 
@@ -44,7 +44,7 @@ def min_max_norm(arr, new_min=0, new_max=1):
 
   return scaled_arr
 
-def loadFromTxt(sgmFilename,ogmFilename,aggregation_method="sum"):
+def loadFromTxt(sgmFilename,ogmFilename):
     pairs = []
     with open(sgmFilename,"r") as sgmFile, open(ogmFilename,"r") as ogmFile:
 
@@ -58,8 +58,6 @@ def loadFromTxt(sgmFilename,ogmFilename,aggregation_method="sum"):
                 if line1[1] == line2[1]:
                     pairs.append((line1,line2))
                     break
-
-    #change to cropping with final heatmap
     largest_header_pair = max(pairs, key=lambda p: float(p[0][1]))
     largest_social_grid, largest_obstacle_grid = largest_header_pair
     largest_height, largest_width = int(float(largest_social_grid[2])), int(float(largest_social_grid[3]))
@@ -79,18 +77,12 @@ def loadFromTxt(sgmFilename,ogmFilename,aggregation_method="sum"):
             padded_array = padded_array.astype(float)
             padded_array = np.nan_to_num(padded_array,nan=0)
             
-            # Apply chosen aggregation method
-            if aggregation_method == "sum":
-                reshape_final_social_grid += padded_array
-            elif aggregation_method == "average":
-                reshape_final_social_grid += padded_array / len(pairs)  # Average over all grids
-            elif aggregation_method == "max":
-                reshape_final_social_grid = np.maximum(reshape_final_social_grid, padded_array)
-            else:
-                raise ValueError(f"Invalid aggregation method: {aggregation_method}")
-
-    
+            reshape_final_social_grid += padded_array / len(pairs)  # Average over all grids
+        
     reshape_final_social_grid = min_max_norm(reshape_final_social_grid)
+
+    # show final density heat maps
+    show_array_as_image(reshape_final_social_grid)
     
     new_pairs = []
 
@@ -116,13 +108,14 @@ def loadFromTxt(sgmFilename,ogmFilename,aggregation_method="sum"):
             new_pairs.append((sgmList,ogmList))
     return new_pairs
 
+
 def find_matching_files(folder_path):
     matching_files = {}
     for file in os.listdir(folder_path):
         split_file = file.split("_")
-        if len(split_file) == 4 and split_file[3].endswith(".txt"):
+        if len(split_file) == 5 and split_file[4].endswith(".txt"):
             file_number = split_file[0]
-            map_type = split_file[3].split(".")[0]
+            map_type = split_file[4].split(".")[0]
             if map_type in ["socialGridMap", "obstacleGridMap"]:
                 if file_number not in matching_files:
                     matching_files[file_number] = {}
@@ -133,6 +126,7 @@ def addFilesToDataset(matching_files, folderPathOutput):
     for file_number, files in matching_files.items():
         if 'socialGridMap' in files and 'obstacleGridMap' in files:
             sgmFilename = files['socialGridMap']
+            print(sgmFilename)
             ogmFilename = files['obstacleGridMap']
 
             sgm_filename_only = os.path.basename(sgmFilename)
@@ -173,7 +167,7 @@ def socialHeatDensityCreate(folderPathInput,folderPathOutput):
 def loadConfig():
     # Load configuration
     try:
-        with open("ml_pipeline_package/config/pipelineConfig.yaml", "r") as f:
+        with open("/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/config/pipelineConfig.yaml", "r") as f:
             config = yaml.safe_load(f)
             return config
     except FileNotFoundError:
