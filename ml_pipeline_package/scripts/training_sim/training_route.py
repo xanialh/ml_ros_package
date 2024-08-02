@@ -14,22 +14,26 @@ import yaml
 # Load configuration
 try:
   with open("/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/config/pipelineConfig.yaml", "r") as f:
-    configFull = yaml.safe_load(f)
+    config_full = yaml.safe_load(f)
     # load entire config
 except FileNotFoundError:
   print("Error: Configuration file 'config.yaml' not found!")
   # Handle the error or use default values
 
-config = configFull["training_route"]
+config = config_full["training_route"]
 # load just training route config
 
 # set up config
 map = config["map"]
 num_waypoints = config["num_waypoints"]
-waypoint_topic = config["waypoint_topic"]
-goal_result_topic = config["goal_result_topic"]
 starting_position = config["starting_position"]
 max_route_time = config["max_route_time"]
+LAUNCH_FILE = config["launch_file_location"]
+
+#topics
+goal_result_topic = "goal/smf_goto_action/result"
+waypoint_topic = "/pedsim_visualizer/waypoints"
+
 start_position = random.choice(starting_position)
 
 PROCESS_GENERATE_RUNNING = True
@@ -76,7 +80,6 @@ def init_launch(launchfile, process_listener, version, start_position, goal_posi
 
 rospy.init_node("smf_nav_stack_tests_launcher")
 
-LAUNCH_FILE = "/home/xanial/ros/noetic/system/src/pepper_social_nav_tests/launch/smf_nav_stack_test.launch"
 launch = init_launch(
     LAUNCH_FILE, ProcessListener(), version_choice, start_position, goal_position)
 launch.start()
@@ -84,7 +87,7 @@ launch.start()
 goal_reached = False
 
 # takes a random sample from entire list of waypoints
-def subListWaypoints(aList,num):
+def sublist_waypoints(aList,num):
     return random.sample(aList,num)
 
 # goal reached function
@@ -102,7 +105,7 @@ def waypoint_callback(msg):
             wp = [marker.pose.position.x,marker.pose.position.y]
             waypoints.append(wp)
 
-    rospy.set_param("waypointList",waypoints)
+    rospy.set_param("waypoint_list",waypoints)
     waypoint_listener.unregister()
 
 # waypoint listener node
@@ -126,19 +129,19 @@ current_time = 0
 flag = True
 
 # publiser for recording data
-recordPub = rospy.Publisher("/recordFlag", Bool,queue_size=10)
+record_pub = rospy.Publisher("/record_flag", Bool,queue_size=10)
 
 msgEnd = Bool()
 msgEnd.data = False
-recordPub.publish(msgEnd)
+record_pub.publish(msgEnd)
 
 # main loop
 while (flag):
 
     # start recording maps
-    msgStart = Bool()
-    msgStart.data = True
-    recordPub.publish(msgStart)
+    msg_start = Bool()
+    msg_start.data = True
+    record_pub.publish(msg_start)
 
     # timing
     current_time_msg = rospy.wait_for_message("clock", Clock)
@@ -152,7 +155,7 @@ while (flag):
             break
             # no more waypoints
         elif len(waypoints) > num_waypoints:
-            waypoints = subListWaypoints(waypoints,num_waypoints)
+            waypoints = sublist_waypoints(waypoints,num_waypoints)
             # set waypoints for robot
 
         # raise time to allow robot to reach next waypoint
@@ -162,7 +165,7 @@ while (flag):
         new_goal = waypoints.pop(0)
 
         # set waypoints ros param
-        rospy.set_param("waypointList",waypoints)
+        rospy.set_param("waypoint_list",waypoints)
 
         # set new end position
         new_x = new_goal[0]
@@ -180,7 +183,7 @@ while (flag):
 rospy.sleep(1)
 
 # stop recording (just to make sure)
-recordPub.publish(msgEnd)
+record_pub.publish(msgEnd)
 
 #end
 launch.shutdown()

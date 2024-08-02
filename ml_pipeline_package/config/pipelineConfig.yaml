@@ -1,8 +1,7 @@
 training_route:
   map: "small_warehouse"
+  launch_file_location: "/home/xanial/ros/noetic/repos/github.com/CardiffUniversityComputationalRobotics/social-robot-nav-tests/pepper_social_nav_tests/launch/smf_nav_stack_test.launch"
   num_waypoints: 3
-  waypoint_topic: "/pedsim_visualizer/waypoints"
-  goal_result_topic: "/smf_goto_action/result"
   max_route_time: 120
   starting_position: [[0.9, 7.09],
     [-3.32, 8.55],
@@ -35,77 +34,48 @@ create_SDHM_coords:
   folderPathInput: "/home/danielhixson/socNavProject/ml_ros_package/ml_pipeline_package/data/office/eval/without_coords/split_maps"
   folderPathOutput: "/home/danielhixson/socNavProject/ml_ros_package/ml_pipeline_package/data/office/eval/without_coords/cropped_maps"
 
-FCNv1:
+FCN:
   file_path_input: "/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/bookstore/final_maps/without_coords"
   file_path_output: "ml_pipeline_package/data/trained_models/bookstore/"
+  lower_bound_threshold: 0.1
+  upper_bound_threshold: 0.5
+  weighted: false
+  class_matrix: [[3860989,  524777,  323086],[ 377772,  148099,   53876],[  99907,   36103,   31263]]
   training_image_size: [128,128]
-  criterion: 1
-  optimiser: 2
-  num_classes: 3
-  batch_size: 4
+  batch_size: 64
   num_epochs: 50
-  dict: 1
-  lower_bound_threshold: 100
-  upper_bound_threshold: 700
-  learning_rate: 0.001
-  momentum: 0.9
-  betas: [0.9, 0.999]
-  alpha: 0.9
-  rho: 0.9
+  model_name: "weirdloss64batch"
 
-FCNv2:
-  file_path_input: "/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/bookstore/final_maps/without_coords"
-  file_path_output: "ml_pipeline_package/data/trained_models/bookstore/"
-  training_image_size: [128,128]
-  criterion: 1
-  optimiser: 2
-  num_classes: 3
-  batch_size: 4
-  num_epochs: 50
-  dict: 1
-  lower_bound_threshold: 100
-  upper_bound_threshold: 700
-  learning_rate: 0.001
-  momentum: 0.9
-  betas: [0.9, 0.999]
-  alpha: 0.9
-  rho: 0.9
-
-CNNv1:
-  file_path_input: "ml_pipeline_package/data/maps_with_coords/maps_SDHM_cropped/office"
-  file_path_output: "ml_pipeline_package/data/trained_models"
-  training_image_size: [128,128]
-  criterion: 1
-  optimiser: 3
-  num_classes: 3
-  batch_size: 12
-  num_epochs: 2
-  dict: 1
-  lower_bound_threshold: 100
-  upper_bound_threshold: 700
-  learning_rate: 0.001
-  momentum: 0.9
-  betas: [0.9, 0.999]
-  alpha: 0.9
-  rho: 0.9
-
-CNNv2:
+CNN:
   file_path_input: "ml_pipeline_package/data/maps_with_coords/maps_SDHM_cropped/office"
   file_path_output: "ml_pipeline_package/data/trained_models/office"
+  lower_bound_threshold: 0.1
+  upper_bound_threshold: 0.5
+  weighted: 
+  class_matrix: [[3860989,  524777,  323086],
+        [ 377772,  148099,   53876],
+        [  99907,   36103,   31263]]
   training_image_size: [128,128]
-  criterion: 1
-  optimiser: 3
-  num_classes: 3
-  batch_size: 12
+  batch_size: 6
   num_epochs: 2
-  dict: 1
-  lower_bound_threshold: 100
-  upper_bound_threshold: 700
-  learning_rate: 0.001
-  momentum: 0.9
-  betas: [0.9, 0.999]
-  alpha: 0.9
-  rho: 0.9
+  model_name: "CNN"
+
+eval_FCN:
+  model_location: "/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/trained_models/bookstore/weirdloss64batchFCN.pt"
+  eval_data_location: "/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/bookstore/eval/without_coords/final_maps"
+  training_image_size: [128,128]
+  batch_size: 64
+  lower_bound_threshold: 0.1
+  upper_bound_threshold: 0.5
+
+eval_CNN:
+  model_location: "/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/trained_models/bookstore/noweights.pt"
+  eval_data_location: "/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/bookstore/final_maps/without_coords"
+  training_image_size: [128,128]
+  batch_size: 4
+  lower_bound_threshold: 0.1
+  upper_bound_threshold: 0.5
+
 
 
 

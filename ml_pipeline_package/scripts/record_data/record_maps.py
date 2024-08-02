@@ -7,28 +7,28 @@ import os
 from std_msgs.msg import Bool
 import yaml
 
-class rosRecorder:
-    def __init__(self,i,datetimeRecording,folder_path,ogm_topic,sgm_topic):
+class Ros_recorder:
+    def __init__(self,i,datetime_recording,folder_path,ogm_topic,sgm_topic):
         self.i = i
         self.ogm_topic = ogm_topic
         self.sgm_topic = sgm_topic
-        self.datetimeRecording = datetimeRecording
-        self.fileName = os.path.join(folder_path, str(self.i) + "_recording_" + datetimeRecording + ".txt")
-        self.file = open(self.fileName,"w")
+        self.datetime_recording = datetime_recording
+        self.filename = os.path.join(folder_path, str(self.i) + "_recording_" + datetime_recording + ".txt")
+        self.file = open(self.filename,"w")
         print("New file made")
-        self.recordingFlag = True
-        self.ogmSub = None
-        self.sgmSub = None
+        self.recording_flag = True
+        self.ogm_sub = None
+        self.sgm_sub = None
 
-    def setRecordingFlag(self,value):
-        self.recordingFlag = False
+    def set_recording_flag(self,value):
+        self.recording_flag = False
         if value == False:
             self.file.close()
             print("file closed")
-            if self.ogmSub is not None:
-                self.ogmSub.unregister()
-            if self.sgmSub is not None:
-                self.sgmSub.unregister()
+            if self.ogm_sub is not None:
+                self.ogm_sub.unregister()
+            if self.sgm_sub is not None:
+                self.sgm_sub.unregister()
     
     def s_gridmap_callback(self,msg,appendFile):
         '''
@@ -55,17 +55,17 @@ class rosRecorder:
         
         layers_copy = msg.layers.copy()
         # Extract data from the 'social' layer
-        social_heatmap_data = None
+        social_gridmap_data = None
         for layer, data in zip(layers_copy , msg.data):
-            if layer == 'social_heatmap':
-                social_heatmap_data = data
+            if layer == 'social_gridmap':
+                social_gridmap_data = data
                 break
 
-        if social_heatmap_data is None:
-            rospy.logwarn("No social heat map data found")
+        if social_gridmap_data is None:
+            rospy.logwarn("No social grid map data found")
             return
 
-        data = social_heatmap_data
+        data = social_gridmap_data
         sequence = float(msg.info.header.seq - 1)
         column_index = None
         row_index = None
@@ -79,10 +79,10 @@ class rosRecorder:
                 row_index = d.size
         numpy_array = np.array(data.data)
 
-        arrayWithWidth = np.insert(numpy_array,0,float(row_index))
-        arrayWithHeight = np.insert(arrayWithWidth ,0,float(column_index))
+        array_with_width = np.insert(numpy_array,0,float(row_index))
+        array_with_height = np.insert(array_with_width ,0,float(column_index))
 
-        seq_array = np.insert(arrayWithHeight,0,sequence)
+        seq_array = np.insert(array_with_height,0,sequence)
 
         final_array = np.insert(seq_array,0,float(1))
 
@@ -115,12 +115,12 @@ class rosRecorder:
 
         numpy_array = np.array(data)
 
-        arrayWithWidth = np.insert(numpy_array,0,float(column_index))
-        arrayWithHeight = np.insert(arrayWithWidth ,0,float(row_index))
+        array_with_width = np.insert(numpy_array,0,float(column_index))
+        array_with_height = np.insert(array_with_width ,0,float(row_index))
 
         sequence = float(msg.header.seq)
 
-        seq_array = np.insert(arrayWithHeight,0,sequence)
+        seq_array = np.insert(array_with_height,0,sequence)
 
         final_array = np.insert(seq_array,0,float(0))
 
@@ -131,27 +131,27 @@ class rosRecorder:
             self.file.close()
             topics = [self.ogm_topic, self.sgm_topic]
 
-            self.file = open(self.fileName,'a')
+            self.file = open(self.filename,'a')
 
-            self.ogmSub = rospy.Subscriber(topics[0], OccupancyGrid, self.o_gridmap_callback,callback_args=self.file)
-            self.sgmSub = rospy.Subscriber(topics[1], GridMap, self.s_gridmap_callback,callback_args=self.file)
+            self.ogm_sub = rospy.Subscriber(topics[0], OccupancyGrid, self.o_gridmap_callback,callback_args=self.file)
+            self.sgm_sub = rospy.Subscriber(topics[1], GridMap, self.s_gridmap_callback,callback_args=self.file)
 
 
 
-class dataCollector:
+class Data_collector:
     def __init__(self,folder_path,ogm_topic,sgm_topic,max_files) -> None:
         self.folder_path = folder_path
         self.ogm_topic = ogm_topic
         self.sgm_topic = sgm_topic
-        self.recordingFlag = True
-        self.currentRecorder = None
+        self.recording_flag = True
+        self.current_recorder = None
         self.i = 0
         self.max_files = max_files
-        rospy.Subscriber("/routeEnd",Bool,callback=self.endRecorderCallback,queue_size=10)
+        rospy.Subscriber("/route_end",Bool,callback=self.end_recorder_callback,queue_size=10)
 
-    def endRecorderCallback(self,msg):
-        booleanValue = bool(msg.data)
-        self.recordingFlag = booleanValue
+    def end_recorder_callback(self,msg):
+        boolean_value = bool(msg.data)
+        self.recording_flag = boolean_value
 
     def loop(self):
         timeLog = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
@@ -163,27 +163,27 @@ class dataCollector:
                     print("Maximum number of files reached")
                     break
                 print("New recorder made")
-                self.currentRecorder = rosRecorder(self.i,timeLog,self.folder_path,self.ogm_topic,self.sgm_topic)
-                self.currentRecorder.record()
+                self.current_recorder = Ros_recorder(self.i,timeLog,self.folder_path,self.ogm_topic,self.sgm_topic)
+                self.current_recorder.record()
 
-                while self.recordingFlag:
+                while self.recording_flag:
                     rospy.sleep(1)
 
                 print("route end flag flipped")    
 
-                self.currentRecorder.setRecordingFlag(False)
+                self.current_recorder.set_recording_flag(False)
                 print("Recorder flag flipped")
-                self.currentRecorder = None
+                self.current_recorder = None
                 print("Recorder successfully ended")
             except Exception as e:
                 print(e)
-                if self.currentRecorder:
-                    self.currentRecorder.setRecordingFlag(False)
+                if self.current_recorder:
+                    self.current_recorder.set_recording_flag(False)
                     print("current recorder flag turned false")
-                    self.currentRecorder = None  # Clear reference to stopped
+                    self.current_recorder = None  # Clear reference to stopped
 
 
-def loadConfig():
+def load_config():
     # Load configuration
     try:
         with open("ml_pipeline_package/config/pipelineConfig.yaml", "r") as f:
@@ -194,21 +194,20 @@ def loadConfig():
     # Handle the error or use default values
 
 def main():
-    configFull = loadConfig()
-    config = configFull["record_maps"]
+    config_full = load_config()
+    config = config_full["record_maps"]
 
     folder_path = config["folder_path"]
     ogm_topic = config["ogm_topic"]
     sgm_topic = config["sgm_topic"]
     max_files = config["max_files"]
-    
 
     #social grid map has 1 as first element
     #obstacle grid map has 0 as first element
 
     rospy.init_node("gridMapCollector")
-    fileMaker = dataCollector(folder_path,ogm_topic,sgm_topic,max_files)
-    fileMaker.loop()
+    file_maker = Data_collector(folder_path,ogm_topic,sgm_topic,max_files)
+    file_maker.loop()
 
 if __name__ == "__main__":
     main()

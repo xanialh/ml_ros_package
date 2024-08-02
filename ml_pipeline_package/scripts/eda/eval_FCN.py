@@ -19,14 +19,14 @@ import time
 import cv2
    
 def load_model(model_path):
-  model = SocialHeatMapFCN()
+  model = FCN()
   model.load_state_dict(torch.load(model_path))
   model.eval()  # Set the model to evaluation mode
   return model
 
-class SocialHeatMapFCN(nn.Module):
+class FCN(nn.Module):
     def __init__(self):
-        super(SocialHeatMapFCN, self).__init__()
+        super(FCN, self).__init__()
         
         # Encoder (feature extraction)
         self.encoder = nn.Sequential(
@@ -58,14 +58,13 @@ class SocialHeatMapFCN(nn.Module):
         
         # Forward pass through the decoder
         x = self.decoder(x)
-   
+
         return x
    
-class HMDataset(Dataset):
-    def __init__(self, transform=None) -> None:
+class HM_Dataset(Dataset):
+    def __init__(self) -> None:
         self.data = []
         self.labels = []
-        self.transform = transform
 
     def __len__(self):
         return len(self.data)
@@ -78,67 +77,59 @@ class HMDataset(Dataset):
 
         return sample, label
     
-    def addData(self,data,labels,row_index,column_index):
+    def add_data(self,data,labels,row_index,column_index,training_image_size):
         data = np.array(data)
         labels = np.array(labels)
 
         data = data.astype(np.float32)
         labels = labels.astype(np.float32)
 
-        reshapeData = data.reshape(row_index,column_index)
-        newReshapeData = cv2.resize(reshapeData, (128, 128), interpolation=cv2.INTER_AREA)
-        dataTensor = torch.from_numpy(newReshapeData)
+        reshape_data = data.reshape(row_index,column_index)
+        new_reshape_data = cv2.resize(reshape_data, tuple(training_image_size), interpolation=cv2.INTER_AREA)
+        data_tensor = torch.from_numpy(new_reshape_data)
         
-        reshapeLabels = labels.reshape(row_index,column_index)
-        newReshapeLabels = cv2.resize(reshapeLabels, (128, 128), interpolation=cv2.INTER_AREA)
-        labelsTensor = torch.from_numpy(newReshapeLabels)
+        reshape_labels = labels.reshape(row_index,column_index)
+        new_reshape_labels = cv2.resize(reshape_labels, tuple(training_image_size), interpolation=cv2.INTER_AREA)
+        labels_tensor = torch.from_numpy(new_reshape_labels)
 
-        labelsTensor = torch.round(labelsTensor)
+        labels_tensor = torch.round(labels_tensor)
 
-        self.data.append(dataTensor.unsqueeze(0))
-        self.labels.append(labelsTensor)
+        self.data.append(data_tensor.unsqueeze(0))
+        self.labels.append(labels_tensor)
 
-    def getData(self):
-        return self.data
-    
-    def getLabels(self):
-        return self.labels
+def social_map_to_labels(social_GridMap,low_bound,high_bound):
 
-def socialMapToLabels(socialGridMap):
-    low_bound = 0.1
-    high_bound = 0.5
-
-    length = len(socialGridMap)
+    length = len(social_GridMap)
 
     for i in range(length):
-        value = float(socialGridMap[i])
+        value = float(social_GridMap[i])
         if value < low_bound or math.isnan(value):
-            socialGridMap[i] = 0
+            social_GridMap[i] = 0
         elif value >= high_bound:
-            socialGridMap[i] = 2
+            social_GridMap[i] = 2
         else:
-            socialGridMap[i] = 1
+            social_GridMap[i] = 1
 
-    return socialGridMap
+    return social_GridMap
 
-def loadFromTxt(sgmFilename,ogmFilename):
+def load_from_txt(sgm_filename,ogm_filename):
     pairs = []
-    with open(sgmFilename,"r") as sgmFile, open(ogmFilename,"r") as ogmFile:
+    with open(sgm_filename,"r") as sgmFile, open(ogm_filename,"r") as ogmFile:
 
-        sgmReader = csv.reader(sgmFile)
-        ogmReader = csv.reader(ogmFile)
+        sgm_reader = csv.reader(sgmFile)
+        ogm_reader = csv.reader(ogmFile)
 
-        ogmLines = list(ogmReader)
+        ogm_lines = list(ogm_reader)
 
-        for line1 in sgmReader:
-            for line2 in ogmLines:
+        for line1 in sgm_reader:
+            for line2 in ogm_lines:
                 if line1[1] == line2[1]:
                     pairs.append((line1,line2))
-                    break     
+                    break
     
     return pairs
 
-def loadIntoDataset(pairs,dataset):
+def load_into_dataset(pairs,dataset,training_image_size,low_bound,high_bound):
     for pair in pairs:
         sgm = pair[0]
         ogm = pair[1]
@@ -149,9 +140,10 @@ def loadIntoDataset(pairs,dataset):
         column_index = int(float(sgm[3]))
 
         data = ogm[4:]
-        labels = socialMapToLabels(sgm[4:])
+        labels = social_map_to_labels(sgm[4:],low_bound,high_bound)
 
-        dataset.addData(data,labels,row_index,column_index)
+        dataset.add_data(data,labels,row_index,column_index,training_image_size)
+
 
 def show_array_as_image(array):
   plt.imshow(array, cmap='gray')
@@ -171,18 +163,28 @@ def find_matching_files(folder_path):
                 matching_files[file_number][map_type] = os.path.join(folder_path, file)
     return matching_files
 
-def addFilesToDataset(matching_files,dataset):
-    for file_number, files in matching_files.items():
-        if 'socialGridMap' in files and 'obstacleGridMap' in files:
-            sgmFilename = files['socialGridMap']
-            ogmFilename = files['obstacleGridMap']
-            pairs = loadFromTxt(sgmFilename, ogmFilename)
-            print(f"Pairs for files with number {file_number}:")
-            loadIntoDataset(pairs,dataset)
+def load_config():
+        # Load configuration
+    try:
+        with open("ml_pipeline_package/config/pipelineConfig.yaml", "r") as f:
+            config = yaml.safe_load(f)
+            return config
+    except FileNotFoundError:
+        print("Error: Configuration file 'config.yaml' not found!")
+    # Handle the error or use default values
 
 def train():
-    model = load_model("/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/trained_models/bookstore/nodropoutFCNv2.pt")
+    config_full = load_config()
+    config = config_full["eval_FCN"]
 
+    model_location = config["model_location"]
+    file_path_input = config["eval_data_location"]
+    training_image_size = config["training_image_size"]
+    batch_size = config["batch_size"]
+    lower_bound_threshold = config["lower_bound_threshold"]
+    upper_bound_threshold = config["upper_bound_threshold"]
+    
+    model = load_model(model_location)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     model.to(device)
@@ -213,38 +215,36 @@ def train():
     confusion_matrix = torchmetrics.ConfusionMatrix(task="multiclass", num_classes=3).to(device)
     confusion_matrix = confusion_matrix.to(device)
 
-    criterion = nn.CrossEntropyLoss()
-
-    matchingFiles = find_matching_files("/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/bookstore/eval/without_coords/final_maps")
-
     total_loss = 0.0
     num_samples = 0
 
-    newDataset = HMDataset()
+    criterion = nn.CrossEntropyLoss()
+    matching_files = find_matching_files(file_path_input)
+    
+    if len(matching_files) == 0:
+        raise FileNotFoundError("No files found")
 
-    for file_number, files in matchingFiles.items():
+    new_dataset = HM_Dataset()
+
+    for file_number, files in matching_files.items():
         if 'socialGridMap' in files and 'obstacleGridMap' in files:
             sgmFilename = files['socialGridMap']
             ogmFilename = files['obstacleGridMap']
-            pairs = loadFromTxt(sgmFilename, ogmFilename,)
+            pairs = load_from_txt(sgmFilename, ogmFilename)
             print(f"file number: {file_number}")
-            loadIntoDataset(pairs,newDataset)
+            load_into_dataset(pairs,new_dataset,training_image_size,lower_bound_threshold,upper_bound_threshold)
 
-    newDataLoader = DataLoader(newDataset,batch_size=6,shuffle=True)
+    new_dataLoader = DataLoader(new_dataset,batch_size=batch_size,shuffle=True)
 
-    stop = False
     with torch.no_grad():
-        for inputs, labels in newDataLoader:
+        for inputs, labels in new_dataLoader:
             inputs = inputs.to(device)
             labels = labels.to(device)
-            #show_tensor_as_image(labels)
             # Forward pass
             outputs = model(inputs)
             #print("**************")
             pred_classes = torch.argmax(outputs, dim=1)
-
-            #show_tensor_as_image(pred_classes)
-            
+    
             # Compute the loss
             loss = criterion(outputs, labels)
             print(loss.item())
@@ -260,7 +260,7 @@ def train():
             confusion_matrix.update(pred_classes , labels)
             per_class_accuracy.update(outputs, labels)
 
-    time.sleep(5)
+    time.sleep(1)
 
     accuracy = accuracy.compute()
     mse = mse.compute()
@@ -274,16 +274,16 @@ def train():
 
     avg_loss = total_loss/num_samples
 
+    print(f"Evaluation Accuracy: {accuracy}")
+    print(f"Per class accuracy:{class_accuracies}")
     print(f"iou: {iou}")
     print(f"average loss: {avg_loss}")
     print(f"mse: {mse}")
     print(f"mae: {mae}")
-    print(f"Evaluation Accuracy: {accuracy}")
     print(f"Precision: {precision}")
     print(f"f1: {f1}")
     print(f"recall: {recall}")
     print(f"Confusion Matrix:\n{confusion_matrix}")
-    print(f"Per class accuracy:{class_accuracies}")
 
 def show_tensor_as_image(tensor, title='Image', cmap='viridis',index=0):
     """Display a tensor as an image."""
@@ -303,9 +303,7 @@ def show_tensor_as_image(tensor, title='Image', cmap='viridis',index=0):
     plt.title(title)
     plt.show()
 
-
 if __name__ == "__main__":
-    torch.set_printoptions(threshold=float('inf'), precision=4, edgeitems=10)
     train()
 
 

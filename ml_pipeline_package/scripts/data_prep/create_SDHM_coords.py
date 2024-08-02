@@ -44,17 +44,17 @@ def min_max_norm(arr, new_min=0, new_max=1):
 
   return scaled_arr
 
-def loadFromTxt(sgmFilename,ogmFilename,aggregation_method="sum"):
+def load_from_txt(sgm_filename,ogm_filename):
     pairs = []
-    with open(sgmFilename,"r") as sgmFile, open(ogmFilename,"r") as ogmFile:
+    with open(sgm_filename,"r") as sgmFile, open(ogm_filename,"r") as ogmFile:
 
-        sgmReader = csv.reader(sgmFile)
-        ogmReader = csv.reader(ogmFile)
+        sgm_reader = csv.reader(sgmFile)
+        ogm_reader = csv.reader(ogmFile)
 
-        ogmLines = list(ogmReader)
+        ogm_lines = list(ogm_reader)
 
-        for line1 in sgmReader:
-            for line2 in ogmLines:
+        for line1 in sgm_reader:
+            for line2 in ogm_lines:
                 if line1[1] == line2[1]:
                     pairs.append((line1,line2))
                     break
@@ -73,53 +73,41 @@ def loadFromTxt(sgmFilename,ogmFilename,aggregation_method="sum"):
     
     for pair in pairs:
         if pair[0][1] != largest_header:
-            socialGridMap = np.array(pair[0][6:])
+            social_GridMap = np.array(pair[0][6:])
             height,width = int(float(pair[0][2])),int(float(pair[0][3]))
-            reshape_socialGridMap = socialGridMap.reshape(height,width)
+            reshape_socialGridMap = social_GridMap.reshape(height,width)
             reshape_socialGridMap = reshape_socialGridMap.astype(float)
             padded_array = pad_array_to_shape(reshape_socialGridMap,(largest_height, largest_width),0)
             padded_array = padded_array.astype(float)
             padded_array = np.nan_to_num(padded_array,nan=0)
-            
-            # Apply chosen aggregation method
-            if aggregation_method == "sum":
-                reshape_final_social_grid += padded_array
-            elif aggregation_method == "average":
-                reshape_final_social_grid += padded_array / len(pairs)  # Average over all grids
-            elif aggregation_method == "max":
-                reshape_final_social_grid = np.maximum(reshape_final_social_grid, padded_array)
-            else:
-                raise ValueError(f"Invalid aggregation method: {aggregation_method}")
-
-    
+          
+            reshape_final_social_grid += padded_array / len(pairs) 
+           
     reshape_final_social_grid = min_max_norm(reshape_final_social_grid)
-    reshape_final_social_grid = np.ravel(reshape_final_social_grid)
     
     new_pairs = []
 
     for pair in pairs:
         if pair[1][1] != largest_header:
             ogm_header = pair[1][1]
-            obstacleGridMap = np.array(pair[1][6:])
+            obstacle_GridMap = np.array(pair[1][6:])
             height,width = int(float(pair[1][2])),int(float(pair[1][3]))
             x, y = int(float(pair[0][4])),int(float(pair[0][5]))
-            reshape_obstacleGridMap = obstacleGridMap.reshape(height,width)
+            reshape_obstacleGridMap = obstacle_GridMap.reshape(height,width)
             reshape_obstacleGridMap = reshape_obstacleGridMap.astype(float)
-            padded_ogm_array = pad_array_to_shape(reshape_obstacleGridMap,(largest_height, largest_width),0)
-            padded_ogm_array = padded_ogm_array.astype(float)
 
             cropped_social_grid = reshape_final_social_grid[:height, :width]
 
-            padded_ogm_array = np.ravel(padded_ogm_array)
-            ogmFront = np.array([0,ogm_header,largest_height,largest_width,x,y])
-            ogm = np.concatenate((ogmFront,padded_ogm_array))
-            ogmList = ogm.tolist()
+            reshape_obstacleGridMap = np.ravel(reshape_obstacleGridMap)
+            ogm_front = np.array([0,ogm_header,largest_height,largest_width,x,y])
+            ogm = np.concatenate((ogm_front,reshape_obstacleGridMap))
+            ogm_list = ogm.tolist()
 
-            sgmFront = np.array([1,ogm_header,largest_height,largest_width,largest_x,largest_y])
-            sgm = np.concatenate((sgmFront,cropped_social_grid.ravel()))
-            sgmList = sgm.tolist()
+            sgm_front = np.array([1,ogm_header,largest_height,largest_width,largest_x,largest_y])
+            sgm = np.concatenate((sgm_front,cropped_social_grid.ravel()))
+            sgm_list = sgm.tolist()
 
-            new_pairs.append((sgmList,ogmList))
+            new_pairs.append((sgm_list,ogm_list))
     return new_pairs
 
 def find_matching_files(folder_path):
@@ -135,19 +123,20 @@ def find_matching_files(folder_path):
                 matching_files[file_number][map_type] = os.path.join(folder_path, file)
     return matching_files
 
-def addFilesToDataset(matching_files, folderPathOutput):
+def add_files_to_dataset(matching_files, folder_path_output):
     for file_number, files in matching_files.items():
         if 'socialGridMap' in files and 'obstacleGridMap' in files:
-            sgmFilename = files['socialGridMap']
-            ogmFilename = files['obstacleGridMap']
+            sgm_filename = files['socialGridMap']
+            print(sgm_filename)
+            ogm_filename = files['obstacleGridMap']
 
-            sgm_filename_only = os.path.basename(sgmFilename)
-            ogm_filename_only = os.path.basename(ogmFilename)
+            sgm_filename_only = os.path.basename(sgm_filename)
+            ogm_filename_only = os.path.basename(ogm_filename)
 
             print(f"Pairs for files with number {file_number}:")
-            pairs = loadFromTxt(sgmFilename, ogmFilename,"average")
+            pairs = load_from_txt(sgm_filename, ogm_filename,"average")
             # Create folder path with variable
-            folder_path = os.path.join(folderPathOutput, "")  # Ensure trailing slash
+            folder_path = os.path.join(folder_path_output, "")  # Ensure trailing slash
 
             # Create the folder if it doesn't exist
             os.makedirs(folder_path, exist_ok=True)  # Handles existing folders
@@ -172,11 +161,11 @@ def addFilesToDataset(matching_files, folderPathOutput):
             print("No pairs found in files.")
 
         
-def socialHeatDensityCreate(folderPathInput,folderPathOutput):
+def social_heat_density_create(folderPathInput,folder_path_output):
     matching_pairs = find_matching_files(folderPathInput)
-    addFilesToDataset(matching_pairs,folderPathOutput)
+    add_files_to_dataset(matching_pairs,folder_path_output)
 
-def loadConfig():
+def load_config():
     # Load configuration
     try:
         with open("ml_pipeline_package/config/pipelineConfig.yaml", "r") as f:
@@ -187,11 +176,11 @@ def loadConfig():
     # Handle the error or use default values
 
 def main():
-    configFull = loadConfig()
-    config = configFull["create_SDHM_coords"]
+    config_full = load_config()
+    config = config_full["create_SDHM_coords"]
     folderPathInput = config["folderPathInput"]
-    folderPathOutput = config["folderPathOutput"]
-    socialHeatDensityCreate(folderPathInput,folderPathOutput)
+    folder_path_output = config["folder_path_output"]
+    social_heat_density_create(folderPathInput,folder_path_output)
     
 
 if __name__ == "__main__":

@@ -14,12 +14,11 @@ import torchmetrics
 import time
 import cv2
 import PIL
-
 import matplotlib.pyplot as plt
 
-class SocialHeatMapFCN(nn.Module):
+class FCN(nn.Module):
     def __init__(self):
-        super(SocialHeatMapFCN, self).__init__()
+        super(FCN, self).__init__()
         
         # Encoder (feature extraction)
         self.encoder = nn.Sequential(
@@ -54,7 +53,7 @@ class SocialHeatMapFCN(nn.Module):
 
         return x
    
-class HMDataset(Dataset):
+class HM_Dataset(Dataset):
     def __init__(self) -> None:
         self.data = []
         self.labels = []
@@ -70,25 +69,25 @@ class HMDataset(Dataset):
 
         return sample, label
     
-    def addData(self,data,labels,row_index,column_index,training_image_size):
+    def add_data(self,data,labels,row_index,column_index,training_image_size):
         data = np.array(data)
         labels = np.array(labels)
 
         data = data.astype(np.float32)
         labels = labels.astype(np.float32)
 
-        reshapeData = data.reshape(row_index,column_index)
-        newReshapeData = cv2.resize(reshapeData, tuple(training_image_size), interpolation=cv2.INTER_AREA)
-        dataTensor = torch.from_numpy(newReshapeData)
+        reshape_data = data.reshape(row_index,column_index)
+        new_reshape_data = cv2.resize(reshape_data, tuple(training_image_size), interpolation=cv2.INTER_AREA)
+        data_tensor = torch.from_numpy(new_reshape_data)
         
-        reshapeLabels = labels.reshape(row_index,column_index)
-        newReshapeLabels = cv2.resize(reshapeLabels, tuple(training_image_size), interpolation=cv2.INTER_AREA)
-        labelsTensor = torch.from_numpy(newReshapeLabels)
+        reshape_labels = labels.reshape(row_index,column_index)
+        new_reshape_labels = cv2.resize(reshape_labels, tuple(training_image_size), interpolation=cv2.INTER_AREA)
+        labels_tensor = torch.from_numpy(new_reshape_labels)
 
-        labelsTensor = torch.round(labelsTensor)
+        labels_tensor = torch.round(labels_tensor)
 
-        self.data.append(dataTensor.unsqueeze(0))
-        self.labels.append(labelsTensor)
+        self.data.append(data_tensor.unsqueeze(0))
+        self.labels.append(labels_tensor)
 
     def getData(self):
         return self.data
@@ -96,41 +95,39 @@ class HMDataset(Dataset):
     def getLabels(self):
         return self.labels
 
-def socialMapToLabels(socialGridMap):
-    low_bound = 0.1
-    high_bound = 0.5
+def social_map_to_labels(social_GridMap,low_bound,high_bound):
 
-    length = len(socialGridMap)
+    length = len(social_GridMap)
 
     for i in range(length):
-        value = float(socialGridMap[i])
+        value = float(social_GridMap[i])
         if value < low_bound or math.isnan(value):
-            socialGridMap[i] = 0
+            social_GridMap[i] = 0
         elif value >= high_bound:
-            socialGridMap[i] = 2
+            social_GridMap[i] = 2
         else:
-            socialGridMap[i] = 1
+            social_GridMap[i] = 1
 
-    return socialGridMap
+    return social_GridMap
 
-def loadFromTxt(sgmFilename,ogmFilename):
+def load_from_txt(sgm_filename,ogm_filename):
     pairs = []
-    with open(sgmFilename,"r") as sgmFile, open(ogmFilename,"r") as ogmFile:
+    with open(sgm_filename,"r") as sgmFile, open(ogm_filename,"r") as ogmFile:
 
-        sgmReader = csv.reader(sgmFile)
-        ogmReader = csv.reader(ogmFile)
+        sgm_reader = csv.reader(sgmFile)
+        ogm_reader = csv.reader(ogmFile)
 
-        ogmLines = list(ogmReader)
+        ogm_lines = list(ogm_reader)
 
-        for line1 in sgmReader:
-            for line2 in ogmLines:
+        for line1 in sgm_reader:
+            for line2 in ogm_lines:
                 if line1[1] == line2[1]:
                     pairs.append((line1,line2))
-                    break     
+                    break
     
     return pairs
 
-def loadIntoDataset(pairs,dataset,training_image_size):
+def load_into_dataset(pairs,dataset,training_image_size,low_bound,high_bound):
     for pair in pairs:
         sgm = pair[0]
         ogm = pair[1]
@@ -141,23 +138,13 @@ def loadIntoDataset(pairs,dataset,training_image_size):
         column_index = int(float(sgm[3]))
 
         data = ogm[4:]
-        labels = socialMapToLabels(sgm[4:])
-
-        dataset.addData(data,labels,row_index,column_index,training_image_size)
+        labels = social_map_to_labels(sgm[4:],low_bound,high_bound)
+        dataset.add_data(data,labels,row_index,column_index,training_image_size)
 
 def show_array_as_image(array):
   plt.imshow(array, cmap='gray')
   plt.colorbar()
   plt.show()
-
-def pad_array_to_shape(array, target_shape, pad_value=0):
-        # Calculate the padding amounts for each dimension
-    pad_width = [(target_shape[0] - array.shape[0], 0), (target_shape[1] - array.shape[1], 0)]
-
-    # Pad the array using np.pad
-    padded_array = np.pad(array, pad_width, mode='constant', constant_values=pad_value)
-
-    return padded_array
 
 def find_matching_files(folder_path):
     matching_files = {}
@@ -172,7 +159,7 @@ def find_matching_files(folder_path):
                 matching_files[file_number][map_type] = os.path.join(folder_path, file)
     return matching_files
 
-def loadConfig():
+def load_config():
         # Load configuration
     try:
         with open("ml_pipeline_package/config/pipelineConfig.yaml", "r") as f:
@@ -181,103 +168,72 @@ def loadConfig():
     except FileNotFoundError:
         print("Error: Configuration file 'config.yaml' not found!")
     # Handle the error or use default values
+    
 
 def train():
-    configFull = loadConfig()
-    config = configFull["FCNv2"]
+    config_full = load_config()
+    config = config_full["FCN"]
 
     file_path_input = config["file_path_input"]
     file_path_output = config["file_path_output"]
     training_image_size = config["training_image_size"]
-    criterion = config["criterion"]
-    optimizer = config["optimiser"]
-    num_classes = config["num_classes"]
     batch_size = config["batch_size"]
     num_epochs = config["num_epochs"]
-    dict = config["dict"]
     lower_bound_threshold = config["lower_bound_threshold"]
     upper_bound_threshold = config["upper_bound_threshold"]
-    learning_rate = config["learning_rate"]
-    momentum = config["momentum"]
-    betas = config["betas"]
-    alpha = config["alpha"]
-    rho = config["rho"]
-
-    model = SocialHeatMapFCN() # Instantiate the model
+    weighted = config["weighted"]
+    class_matrix = config["class_matrix"]
+    model_name = config["model_name"]
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    model = SocialHeatMapFCN().to(device)
+    model = FCN().to(device)
 
     accuracy = torchmetrics.Accuracy(task="multiclass",num_classes=3)
     accuracy = accuracy.to(device)
-    
-        # Example confusion matrix
-    confusion_matrix = np.array([
-        [4435014,  236474,   37364],
-        [ 464107,  101841,   13799],
-        [ 119221,   30298,   17754]
-    ])
 
-    # Calculate class frequencies
-    total_samples_per_class = confusion_matrix.sum(axis=1)
+    if weighted:
+            # Example confusion matrix
+        confusion_matrix = np.array(class_matrix)
+        # Calculate class frequencies
+        total_samples_per_class = confusion_matrix.sum(axis=1)
+        weights = total_samples_per_class.sum() / (len(total_samples_per_class) * total_samples_per_class)
+        misclassification_rate = confusion_matrix.sum(axis=1) - np.diag(confusion_matrix)
+        weights = weights * (1 + misclassification_rate / total_samples_per_class)
+        weights = weights / weights.sum()
 
-    # Compute weights (inverse of class frequencies)
-    weights = total_samples_per_class.sum() / (len(total_samples_per_class) * total_samples_per_class)
+        weights_tensor = torch.tensor(weights, dtype=torch.float32).to(device)
 
-    # Optionally, adjust weights based on misclassifications
-    misclassification_rate = confusion_matrix.sum(axis=1) - np.diag(confusion_matrix)
-    weights = weights * (1 + misclassification_rate / total_samples_per_class)
+        print(weights_tensor)
 
-    # Normalize weights
-    weights = weights / weights.sum()
-
-    # Convert to tensor and apply to loss function
-    weights_tensor = torch.tensor(weights, dtype=torch.float32).to(device)
-
-    if criterion == 1:
         criterion = nn.CrossEntropyLoss(weight=weights_tensor)
     else:
-        raise ValueError("Invalid criterion value for loss function")
+        criterion = nn.CrossEntropyLoss()
 
-    if optimizer == 1:
-        optimizer = optim.SGD(model.parameters(), lr=learning_rate, momentum=momentum)
-    elif optimizer == 2:
-        optimizer = optim.Adam(model.parameters(), lr=learning_rate, betas=betas)
-    elif optimizer == 3:
-        optimizer = optim.RMSprop(model.parameters(), lr=learning_rate, alpha=alpha)
-    elif optimizer == 4:
-        optimizer = optim.Adadelta(model.parameters(), rho=rho)
-    elif optimizer == 5:
-        optimizer = optim.Adagrad(model.parameters(), lr=learning_rate)
-    else:
-        raise ValueError("Invalid value for optimiser")
-
+    optimizer = optim.Adam(model.parameters())
+   
     matchingFiles = find_matching_files(file_path_input)
+    
+    if len(matchingFiles) == 0:
+        raise FileNotFoundError("No files found")
 
-    tolerance = 0.0000000000000000001  # Threshold for loss function change (adjust as needed)
-    prev_loss = float('inf')  # Initialize with a high value
-    plateau_tolerance = 25
+    new_dataset = HM_Dataset()
 
-    newDataset = HMDataset()
+    matching_files = find_matching_files(file_path_input)
 
-    for file_number, files in matchingFiles.items():
-        plateau_count = 0
+    for file_number, files in matching_files.items():
         if 'socialGridMap' in files and 'obstacleGridMap' in files:
             sgmFilename = files['socialGridMap']
             ogmFilename = files['obstacleGridMap']
-            pairs = loadFromTxt(sgmFilename, ogmFilename,)
+            pairs = load_from_txt(sgmFilename, ogmFilename,)
             print(f"file number: {file_number}")
-            loadIntoDataset(pairs,newDataset,training_image_size)
+            load_into_dataset(pairs,new_dataset,training_image_size,lower_bound_threshold,upper_bound_threshold)
 
-    newDataLoader = DataLoader(newDataset,batch_size=batch_size,shuffle=True)
-
-    stop = False
+    new_dataLoader = DataLoader(new_dataset,batch_size=batch_size,shuffle=True)
 
     for epoch in range(num_epochs):
     # Iterate over the dataset
-        if stop != True:
-            for inputs, labels in newDataLoader:
+            for inputs, labels in new_dataLoader:
                 inputs = inputs.to(device)
                 labels = labels.to(device)
             # Forward pass
@@ -285,16 +241,6 @@ def train():
             # Compute the loss
                 loss = criterion(outputs, labels)
                 print(loss.item())
-
-                if abs(prev_loss - loss.item()) > tolerance:
-                    prev_loss = loss.item()  # Update previous loss
-                    plateau_count = 0  # Reset plateau counter if improvement detected
-                else:
-                    plateau_count += 1  # Increment counter if loss plateaus
-                # Move to next file if plateau_tolerance is reached
-                if plateau_count >= plateau_tolerance:
-                    print(f"Loss plateaued for {plateau_tolerance} epochs. Moving to next file.")
-                    stop = True
             # Backward pass and optimization
                 optimizer.zero_grad()
                 loss.backward()
@@ -302,21 +248,30 @@ def train():
 
                 accuracy.update(outputs,labels)
 
-    time.sleep(5)
+    time.sleep(1)
 
     accuracy = accuracy.compute()
     print(f"Evaluation Accuracy: {accuracy}")
-    torch.save(model.state_dict(), file_path_output + "nodropoutFCNv2.pt")
+    torch.save(model.state_dict(), file_path_output + model_name + "FCN.pt")
 
-def visualize_label_tensor(tensor, title='Label Tensor'):
-    # Convert tensor to numpy array
-    np_array = tensor.numpy()
-    plt.imshow(np_array.squeeze(), cmap='gray')
-    plt.title(title)
+def show_tensor_as_image(tensor, title='Image', cmap='viridis',index=0):
+    """Display a tensor as an image."""
+    # Ensure the tensor is on the CPU and converted to numpy
+    tensor = tensor.cpu().numpy()
+    tensor = tensor[0]
+
+    if tensor.ndim == 4:  # Batch dimension exists
+        tensor = tensor[index]
+    
+    # Remove singleton dimensions if any
+    if tensor.ndim > 2:
+        tensor = tensor.squeeze()
+
+    plt.imshow(tensor, cmap=cmap)
     plt.colorbar()
+    plt.title(title)
     plt.show()
 
 if __name__ == "__main__":
-    torch.set_printoptions(threshold=float('inf'), precision=4, edgeitems=10)
     train()
 

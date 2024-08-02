@@ -14,9 +14,9 @@ import torchmetrics
 import time
 import cv2
 
-class SocialHeatMapCombined(nn.Module):
+class CNN(nn.Module):
     def __init__(self):
-        super(SocialHeatMapCombined, self).__init__()
+        super(CNN, self).__init__()
 
         # Define input channels for robot position and obstacle grid map
         robot_pos_channels = 2  # Assuming x and y coordinates as separate channels
@@ -44,12 +44,12 @@ class SocialHeatMapCombined(nn.Module):
             nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, padding=1),
             nn.ReLU(inplace=True),
             nn.MaxPool2d(kernel_size=2, stride=2),
-            nn.Dropout(p=0.2),  # Add dropout with probability 0.5
+            nn.Dropout(p=0.2),
             nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, padding=1),
             nn.ReLU(inplace=True),
             nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, padding=1),
             nn.MaxPool2d(kernel_size=2, stride=2),
-            nn.Dropout(p=0.2)  # Add dropout with probability 0.5
+            nn.Dropout(p=0.2)
         )
         
         # Decoder (upsampling)
@@ -84,7 +84,7 @@ class SocialHeatMapCombined(nn.Module):
 
         return social_heatmap
 
-class HMDataset(Dataset):
+class HM_Dataset(Dataset):
     def __init__(self, transform=None) -> None:
         self.data = []
         self.labels = []
@@ -103,74 +103,64 @@ class HMDataset(Dataset):
 
         return sample, label, coords
 
-    def addData(self,data,labels,row_index,column_index,coord):
+    def add_data(self,data,labels,row_index,column_index,coord,training_image_size):
+        data = np.array(data)
+        labels = np.array(labels)
+        coord_array = np.array(coord)
 
-      data = np.array(data)
-      labels = np.array(labels)
-      coordArray = np.array(coord)
+        data = data.astype(np.float32)
+        labels = labels.astype(np.float32)
+        coord_array = coord_array.astype(np.float32)
 
-      data = data.astype(np.float32)
-      labels = labels.astype(np.float32)
-      coordArray = coordArray.astype(np.float32)
+        reshape_data = data.reshape(row_index,column_index)
+        new_reshape_data = cv2.resize(reshape_data, tuple(training_image_size), interpolation=cv2.INTER_AREA)
+        data_tensor = torch.from_numpy(new_reshape_data)
 
-      reshapeData = data.reshape(row_index,column_index)
-      newReshapeData = cv2.resize(reshapeData, (128, 128), interpolation=cv2.INTER_AREA)
-      dataTensor = torch.from_numpy(newReshapeData)
-        
-      reshapeLabels = labels.reshape(row_index,column_index)
-      newReshapeLabels = cv2.resize(reshapeLabels, (128, 128), interpolation=cv2.INTER_AREA)
-      labelsTensor = torch.from_numpy(newReshapeLabels)
+        reshape_labels = labels.reshape(row_index,column_index)
+        new_reshape_labels = cv2.resize(reshape_labels, tuple(training_image_size), interpolation=cv2.INTER_AREA)
+        labels_tensor = torch.from_numpy(new_reshape_labels)
 
-      coordTensor = torch.Tensor(coordArray)
+        coord_tensor = torch.Tensor(coord_array)
 
-      labelsTensor = torch.round(labelsTensor)
+        labels_tensor = torch.round(labels_tensor)
 
-      self.data.append(dataTensor.unsqueeze(0))
-      self.labels.append(labelsTensor)
-      self.coords.append(coordTensor)
+        self.data.append(data_tensor.unsqueeze(0))
+        self.labels.append(labels_tensor)
+        self.coords.append(coord_tensor)
 
+def social_map_to_labels(social_GridMap,low_bound,high_bound):
 
-    def getData(self):
-        return self.data
-
-    def getLabels(self):
-        return self.labels
-
-def socialMapToLabels(socialGridMap):
-    low_bound = 0.1
-    high_bound = 0.5
-
-    length = len(socialGridMap)
+    length = len(social_GridMap)
 
     for i in range(length):
-        value = float(socialGridMap[i])
+        value = float(social_GridMap[i])
         if value < low_bound or math.isnan(value):
-            socialGridMap[i] = 0
+            social_GridMap[i] = 0
         elif value >= high_bound:
-            socialGridMap[i] = 2
+            social_GridMap[i] = 2
         else:
-            socialGridMap[i] = 1
+            social_GridMap[i] = 1
 
-    return socialGridMap
+    return social_GridMap
 
-def loadFromTxt(sgmFilename,ogmFilename,density=False):
+def load_from_txt(sgm_filename,ogm_filename):
     pairs = []
-    with open(sgmFilename,"r") as sgmFile, open(ogmFilename,"r") as ogmFile:
+    with open(sgm_filename,"r") as sgmFile, open(ogm_filename,"r") as ogmFile:
 
-        sgmReader = csv.reader(sgmFile)
-        ogmReader = csv.reader(ogmFile)
+        sgm_reader = csv.reader(sgmFile)
+        ogm_reader = csv.reader(ogmFile)
 
-        ogmLines = list(ogmReader)
+        ogm_lines = list(ogm_reader)
 
-        for line1 in sgmReader:
-            for line2 in ogmLines:
+        for line1 in sgm_reader:
+            for line2 in ogm_lines:
                 if line1[1] == line2[1]:
                     pairs.append((line1,line2))
                     break
-
+    
     return pairs
 
-def loadIntoDataset(pairs,dataset):
+def load_into_dataset(pairs,dataset,training_image_size,low_bound,high_bound):
     for pair in pairs:
         sgm = pair[0]
         ogm = pair[1]
@@ -181,24 +171,15 @@ def loadIntoDataset(pairs,dataset):
         column_index = int(float(sgm[3]))
 
         data = ogm[6:]
-        labels = socialMapToLabels(sgm[6:])
+        labels = social_map_to_labels(sgm[6:],low_bound,high_bound)
         coords = [ogm[4],ogm[5]]
 
-        dataset.addData(data,labels,row_index,column_index,coords)
+        dataset.add_data(data,labels,row_index,column_index,coords,training_image_size)
 
 def show_array_as_image(array):
   plt.imshow(array, cmap='gray')
   plt.colorbar()
   plt.show()
-
-def pad_array_to_shape(array, target_shape, pad_value=0):
-        # Calculate the padding amounts for each dimension
-    pad_width = [(target_shape[0] - array.shape[0], 0), (target_shape[1] - array.shape[1], 0)]
-
-    # Pad the array using np.pad
-    padded_array = np.pad(array, pad_width, mode='constant', constant_values=pad_value)
-
-    return padded_array
 
 def find_matching_files(folder_path):
     matching_files = {}
@@ -213,17 +194,7 @@ def find_matching_files(folder_path):
                 matching_files[file_number][map_type] = os.path.join(folder_path, file)
     return matching_files
 
-def addFilesToDataset(matching_files,dataset):
-    for file_number, files in matching_files.items():
-        if 'socialGridMap' in files and 'obstacleGridMap' in files:
-            sgmFilename = files['socialGridMap']
-            ogmFilename = files['obstacleGridMap']
-            pairs = loadFromTxt(sgmFilename, ogmFilename,False)
-            print(f"Pairs for files with number {file_number}:")
-            loadIntoDataset(pairs,dataset)
-
-
-def loadConfig():
+def load_config():
         # Load configuration
     try:
         with open("ml_pipeline_package/config/pipelineConfig.yaml", "r") as f:
@@ -234,113 +205,92 @@ def loadConfig():
     # Handle the error or use default values
 
 def train():
-    configFull = loadConfig()
-    config = configFull["CNNv1"]
+    config_full = load_config()
+    config = config_full["CNN"]
 
     file_path_input = config["file_path_input"]
     file_path_output = config["file_path_output"]
     training_image_size = config["training_image_size"]
-    criterion = config["criterion"]
-    optimizer = config["optimiser"]
-    num_classes = config["num_classes"]
     batch_size = config["batch_size"]
     num_epochs = config["num_epochs"]
-    dict = config["dict"]
     lower_bound_threshold = config["lower_bound_threshold"]
     upper_bound_threshold = config["upper_bound_threshold"]
-    learning_rate = config["learning_rate"]
-    momentum = config["momentum"]
-    betas = config["betas"]
-    alpha = config["alpha"]
-    rho = config["rho"]
-
-    matchingFiles = find_matching_files(file_path_input)
-
+    weighted = config["weighted"]
+    class_matrix = config["class_matrix"]
+    model_name = config["model_name"]
+    
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    model = SocialHeatMapCombined().to(device)
+    model = CNN().to(device)
 
-    accuracy = torchmetrics.Accuracy(task="multiclass",num_classes=num_classes)
+    accuracy = torchmetrics.Accuracy(task="multiclass",num_classes=3)
     accuracy = accuracy.to(device)
 
-    criterion = 1
-    optimizer = 2
+    if weighted:
+            # Example confusion matrix
+        confusion_matrix = np.array(class_matrix)
+        # Calculate class frequencies
+        total_samples_per_class = confusion_matrix.sum(axis=1)
+        weights = total_samples_per_class.sum() / (len(total_samples_per_class) * total_samples_per_class)
+        print(weights)
+        misclassification_rate = confusion_matrix.sum(axis=1) - np.diag(confusion_matrix)
+        weights = weights * (1 + misclassification_rate / total_samples_per_class)
+        weights = weights / weights.sum()
 
-    if criterion == 1:
-        criterion = nn.CrossEntropyLoss()
+        weights_tensor = torch.tensor(weights, dtype=torch.float32).to(device)
+
+        criterion = nn.CrossEntropyLoss(weight=weights_tensor)
     else:
-        raise ValueError("Invalid criterion value for loss function")
+        criterion = nn.CrossEntropyLoss
 
-    if optimizer == 1:
-        optimizer = optim.SGD(model.parameters(), lr=learning_rate, momentum=momentum)
-    elif optimizer == 2:
-        optimizer = optim.Adam(model.parameters(), lr=learning_rate, betas=betas)
-    elif optimizer == 3:
-        optimizer = optim.RMSprop(model.parameters(), lr=learning_rate, alpha=alpha)
-    elif optimizer == 4:
-        optimizer = optim.Adadelta(model.parameters(), rho=rho)
-    elif optimizer == 5:
-        optimizer = optim.Adagrad(model.parameters(), lr=learning_rate)
-    else:
-        raise ValueError("Invalid value for optimiser")
+    optimizer = optim.Adam(model.parameters())
 
-    matchingFiles = find_matching_files(file_path_input)
+    matching_files = find_matching_files(file_path_input)
 
-    tolerance = 0.0000000000000000001  # Threshold for loss function change (adjust as needed)
-    prev_loss = float('inf')  # Initialize with a high value
-    plateau_tolerance = 25
+    new_dataset = HM_Dataset()
 
-    for file_number, files in matchingFiles.items():
-        plateau_count = 0
+    for file_number, files in matching_files.items():
         if 'socialGridMap' in files and 'obstacleGridMap' in files:
-            newDataset = HMDataset()
             sgmFilename = files['socialGridMap']
             ogmFilename = files['obstacleGridMap']
-            pairs = loadFromTxt(sgmFilename, ogmFilename,)
+            pairs = load_from_txt(sgmFilename, ogmFilename,)
             print(f"file number: {file_number}")
-            loadIntoDataset(pairs,newDataset)
+            load_into_dataset(pairs,new_dataset,training_image_size,lower_bound_threshold,upper_bound_threshold)
 
-            newDataLoader = DataLoader(newDataset,batch_size=batch_size,shuffle=True)
+    new_dataLoader = DataLoader(new_dataset,batch_size=batch_size,shuffle=True)
 
-            stop = False
+    for epoch in range(num_epochs):
+    # Iterate over the dataset
+            for inputs, labels, coord in new_dataLoader:
+                inputs = inputs.to(device)
+                labels = labels.to(device)
+                coord = coord.to(device)
+            # Forward pass
+                outputs = model(coord,inputs)
+            # Compute the loss
+                loss = criterion(outputs, labels)
+                print(loss.item())
 
-            for epoch in range(num_epochs):
-            # Iterate over the dataset
-                if stop != True:
-                    for inputs, labels, coord in newDataLoader:
-                        inputs = inputs.to(device)
-                        labels = labels.to(device)
-                        coord = coord.to(device)
-                    # Forward pass
-                        outputs = model(coord,inputs)
-                    # Compute the loss
-                        loss = criterion(outputs, labels)
-                        print(loss.item())
+            # Backward pass and optimization
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
 
-                        if abs(prev_loss - loss.item()) > tolerance:
-                            prev_loss = loss.item()  # Update previous loss
-                            plateau_count = 0  # Reset plateau counter if improvement detected
-                        else:
-                            plateau_count += 1  # Increment counter if loss plateaus
-                        # Move to next file if plateau_tolerance is reached
-                        if plateau_count >= plateau_tolerance:
-                            print(f"Loss plateaued for {plateau_tolerance} epochs. Moving to next file.")
-                            stop = True
-                    # Backward pass and optimization
-                        optimizer.zero_grad()
-                        loss.backward()
-                        optimizer.step()
-
-                        accuracy.update(outputs,labels)
-                        
-            del newDataset
-            del newDataLoader
-
-    time.sleep(2)
+                accuracy.update(outputs,labels)
+                
+    time.sleep(1)
 
     accuracy = accuracy.compute()
     print(f"Evaluation Accuracy: {accuracy}")
-    torch.save(model.state_dict(), file_path_output + "onecfg.pt")
+    torch.save(model.state_dict(), "CNN" + file_path_output + model_name)
+
+def visualize_label_tensor(tensor, title='Label Tensor'):
+    # Convert tensor to numpy array
+    np_array = tensor.numpy()
+    plt.imshow(np_array.squeeze(), cmap='gray')
+    plt.title(title)
+    plt.colorbar()
+    plt.show()
 
 if __name__ == "__main__":
     train()

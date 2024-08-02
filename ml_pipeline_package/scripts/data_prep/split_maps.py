@@ -2,7 +2,7 @@ import os
 import csv
 import yaml
 
-def loadConfig():
+def load_config():
     # Load configuration
     try:
         with open("/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/config/pipelineConfig.yaml", "r") as f:
@@ -13,39 +13,39 @@ def loadConfig():
     # Handle the error or use default values
 
 def split():
-    configFull = loadConfig()
-    config = configFull["split_maps"]
+    config_full = load_config()
+    config = config_full["split_maps"]
 
     directory_path_input = config["directory_path_input"]
     directory_path_output = config["directory_path_output"]
 
     txt_file_count = 0
 
-    socialGridMap = "_socialGridMap.txt"
-    obstacleGridMap = "_obstacleGridMap.txt"
+    social_GridMap = "_socialGridMap.txt"
+    obstacle_GridMap = "_obstacleGridMap.txt"
 
     for filename in os.listdir(directory_path_input):
         if filename.endswith(".txt"):
-            currentFilePath = os.path.join(directory_path_input, filename)
+            current_filePath = os.path.join(directory_path_input, filename)
 
-            newSGMFile = filename.replace(".txt",socialGridMap )
-            newOGMFile = filename.replace(".txt",obstacleGridMap)
+            new_SGM_File = filename.replace(".txt",social_GridMap )
+            new_OGM_File = filename.replace(".txt",obstacle_GridMap)
 
-            outputFilePath_SGM = os.path.join(directory_path_output, newSGMFile)
-            outputFilePath_OGM = os.path.join(directory_path_output, newOGMFile)
+            output_file_path_SGM = os.path.join(directory_path_output, new_SGM_File)
+            output_file_path_OGM = os.path.join(directory_path_output, new_OGM_File)
 
-            with open(outputFilePath_SGM,"w") as SGMFile, open(outputFilePath_OGM,"w") as OGMFile:
-                with open(currentFilePath,"r") as readFile:
-                    reader = csv.reader(readFile)
-                    for line in readFile:
+            with open(output_file_path_SGM,"w") as SGM_file, open(output_file_path_OGM,"w") as OGM_file:
+                with open(current_filePath,"r") as read_file:
+                    reader = csv.reader(read_file)
+                    for line in read_file:
                         if int(line[0]) == 1:
-                            SGMFile.write(line)
+                            SGM_file.write(line)
                         elif int(line[0]) == 0:
-                            OGMFile.write(line)
+                            OGM_file.write(line)
 
-    SGMFile.close()
-    OGMFile.close()
-    readFile.close()
+    SGM_file.close()
+    OGM_file.close()
+    read_file.close()
 
 if __name__ == "__main__":
     split()
