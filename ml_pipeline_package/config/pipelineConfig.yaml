@@ -36,13 +36,13 @@ create_SDHM_coords:
   folderPathOutput: "/home/danielhixson/socNavProject/ml_ros_package/ml_pipeline_package/data/office/eval/without_coords/cropped_maps"
 
 FCNv1:
-  file_path_input: "ml_pipeline_package/data/maps_without_coords/maps_SDHM_cropped/office"
-  file_path_output: "ml_pipeline_package/data/trained_models/office"
+  file_path_input: "/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/bookstore/final_maps/without_coords"
+  file_path_output: "ml_pipeline_package/data/trained_models/bookstore/"
   training_image_size: [128,128]
   criterion: 1
   optimiser: 2
   num_classes: 3
-  batch_size: 6
+  batch_size: 4
   num_epochs: 50
   dict: 1
   lower_bound_threshold: 100
@@ -60,7 +60,7 @@ FCNv2:
   criterion: 1
   optimiser: 2
   num_classes: 3
-  batch_size: 32
+  batch_size: 4
   num_epochs: 50
   dict: 1
   lower_bound_threshold: 100

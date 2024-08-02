@@ -1,4 +1,8 @@
 import torch
+from torch import nn
+from torch.utils.data import DataLoader
+
+import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader
@@ -13,49 +17,28 @@ import yaml
 import torchmetrics
 import time
 import cv2
-
+   
 def load_model(model_path):
-  model = SocialHeatMapCombined()
+  model = SocialHeatMapFCN()
   model.load_state_dict(torch.load(model_path))
   model.eval()  # Set the model to evaluation mode
   return model
 
-class SocialHeatMapCombined(nn.Module):
+class SocialHeatMapFCN(nn.Module):
     def __init__(self):
-        super(SocialHeatMapCombined, self).__init__()
-
-        # Define input channels for robot position and obstacle grid map
-        robot_pos_channels = 2  # Assuming x and y coordinates as separate channels
-        obstacle_map_channels = 1  # Assuming a single channel for obstacle grid map
-
-        # Feature extraction for robot position
-        self.robot_pos_encoding = nn.Sequential(
-            nn.Linear(robot_pos_channels, 32),  # Adjust hidden units as needed
-            nn.ReLU(inplace=True)
-        )
-
-        # Feature extraction for obstacle grid map
-        self.obstacle_map_encoding = nn.Sequential(
-            nn.Conv2d(in_channels=obstacle_map_channels, out_channels=8, kernel_size=3, padding=1),
-            nn.ReLU(inplace=True),
-        )
-
-        # Combined input channels for the encoder after concatenation of robot and obstacle features
-        combined_input_channels = 32 + 8  # 32 from robot_features and 8 from obstacle_map_features
-
+        super(SocialHeatMapFCN, self).__init__()
+        
         # Encoder (feature extraction)
         self.encoder = nn.Sequential(
-            nn.Conv2d(in_channels=combined_input_channels, out_channels=64, kernel_size=3, padding=1), 
+            nn.Conv2d(in_channels=1, out_channels=64, kernel_size=3, padding=1), 
             nn.ReLU(inplace=True),
             nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, padding=1),
             nn.ReLU(inplace=True),
             nn.MaxPool2d(kernel_size=2, stride=2),
-            nn.Dropout(p=0.2),  # Add dropout with probability 0.5
             nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, padding=1),
             nn.ReLU(inplace=True),
             nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, padding=1),
             nn.MaxPool2d(kernel_size=2, stride=2),
-            nn.Dropout(p=0.2)  # Add dropout with probability 0.5
         )
         
         # Decoder (upsampling)
@@ -68,77 +51,56 @@ class SocialHeatMapCombined(nn.Module):
             nn.ReLU(inplace=True),
             nn.ConvTranspose2d(in_channels=32, out_channels=3, kernel_size=4, stride=2, padding=1),
         )
-
-    def forward(self, robot_position, obstacle_grid_map):
-        # Encode robot position
-        robot_features = self.robot_pos_encoding(robot_position)
-        # Expand dimensions to match the 4D shape of obstacle_map_features
-        robot_features = robot_features.unsqueeze(-1).unsqueeze(-1)  # Change shape to [32, 32, 1, 1]
-        robot_features = robot_features.expand(-1, -1, 128, 128)  # Change shape to [32, 32, 128, 128]
-
-        # Encode obstacle grid map
-        obstacle_map_features = self.obstacle_map_encoding(obstacle_grid_map)  # Expected shape: [32, 8, 128, 128]
-
-        # Concatenate along the channel dimension
-        concat_features = torch.cat((robot_features, obstacle_map_features), dim=1)  # New shape: [32, 40, 128, 128]
-
-        # Forward pass through the shared encoder
-        encoded_features = self.encoder(concat_features)  # This layer now correctly handles 40 input channels
-
-        # Forward pass through the decoder with three channels for social heat map
-        social_heatmap = self.decoder(encoded_features)
-
-        return social_heatmap
-
+        
+    def forward(self, x):
+        # Forward pass through the encoder
+        x = self.encoder(x)
+        
+        # Forward pass through the decoder
+        x = self.decoder(x)
+   
+        return x
+   
 class HMDataset(Dataset):
     def __init__(self, transform=None) -> None:
         self.data = []
         self.labels = []
-        self.coords = []
         self.transform = transform
 
     def __len__(self):
         return len(self.data)
-
+    
     def __getitem__(self, index):
         sample = self.data[index]
         label = self.labels[index]
-        coords = self.coords[index]
-
+        
         label = label.long()
 
-        return sample, label, coords
+        return sample, label
+    
+    def addData(self,data,labels,row_index,column_index):
+        data = np.array(data)
+        labels = np.array(labels)
 
-    def addData(self,data,labels,row_index,column_index,coord):
+        data = data.astype(np.float32)
+        labels = labels.astype(np.float32)
 
-      data = np.array(data)
-      labels = np.array(labels)
-      coordArray = np.array(coord)
-
-      data = data.astype(np.float32)
-      labels = labels.astype(np.float32)
-      coordArray = coordArray.astype(np.float32)
-
-      reshapeData = data.reshape(row_index,column_index)
-      newReshapeData = cv2.resize(reshapeData, (128, 128), interpolation=cv2.INTER_AREA)
-      dataTensor = torch.from_numpy(newReshapeData)
+        reshapeData = data.reshape(row_index,column_index)
+        newReshapeData = cv2.resize(reshapeData, (128, 128), interpolation=cv2.INTER_AREA)
+        dataTensor = torch.from_numpy(newReshapeData)
         
-      reshapeLabels = labels.reshape(row_index,column_index)
-      newReshapeLabels = cv2.resize(reshapeLabels, (128, 128), interpolation=cv2.INTER_AREA)
-      labelsTensor = torch.from_numpy(newReshapeLabels)
+        reshapeLabels = labels.reshape(row_index,column_index)
+        newReshapeLabels = cv2.resize(reshapeLabels, (128, 128), interpolation=cv2.INTER_AREA)
+        labelsTensor = torch.from_numpy(newReshapeLabels)
 
-      coordTensor = torch.Tensor(coordArray)
+        labelsTensor = torch.round(labelsTensor)
 
-      labelsTensor = torch.round(labelsTensor)
-
-      self.data.append(dataTensor.unsqueeze(0))
-      self.labels.append(labelsTensor)
-      self.coords.append(coordTensor)
-
+        self.data.append(dataTensor.unsqueeze(0))
+        self.labels.append(labelsTensor)
 
     def getData(self):
         return self.data
-
+    
     def getLabels(self):
         return self.labels
 
@@ -159,7 +121,7 @@ def socialMapToLabels(socialGridMap):
 
     return socialGridMap
 
-def loadFromTxt(sgmFilename,ogmFilename,density=False):
+def loadFromTxt(sgmFilename,ogmFilename):
     pairs = []
     with open(sgmFilename,"r") as sgmFile, open(ogmFilename,"r") as ogmFile:
 
@@ -172,8 +134,8 @@ def loadFromTxt(sgmFilename,ogmFilename,density=False):
             for line2 in ogmLines:
                 if line1[1] == line2[1]:
                     pairs.append((line1,line2))
-                    break
-
+                    break     
+    
     return pairs
 
 def loadIntoDataset(pairs,dataset):
@@ -186,33 +148,23 @@ def loadIntoDataset(pairs,dataset):
         row_index = int(float(sgm[2]))
         column_index = int(float(sgm[3]))
 
-        data = ogm[6:]
-        labels = socialMapToLabels(sgm[6:])
-        coords = [ogm[4],ogm[5]]
+        data = ogm[4:]
+        labels = socialMapToLabels(sgm[4:])
 
-        dataset.addData(data,labels,row_index,column_index,coords)
+        dataset.addData(data,labels,row_index,column_index)
 
 def show_array_as_image(array):
   plt.imshow(array, cmap='gray')
   plt.colorbar()
   plt.show()
 
-def pad_array_to_shape(array, target_shape, pad_value=0):
-        # Calculate the padding amounts for each dimension
-    pad_width = [(target_shape[0] - array.shape[0], 0), (target_shape[1] - array.shape[1], 0)]
-
-    # Pad the array using np.pad
-    padded_array = np.pad(array, pad_width, mode='constant', constant_values=pad_value)
-
-    return padded_array
-
 def find_matching_files(folder_path):
     matching_files = {}
     for file in os.listdir(folder_path):
         split_file = file.split("_")
-        if len(split_file) == 4 and split_file[3].endswith(".txt"):
+        if len(split_file) == 5 and split_file[4].endswith(".txt"):
             file_number = split_file[0]
-            map_type = split_file[3].split(".")[0]
+            map_type = split_file[4].split(".")[0]
             if map_type in ["socialGridMap", "obstacleGridMap"]:
                 if file_number not in matching_files:
                     matching_files[file_number] = {}
@@ -224,22 +176,12 @@ def addFilesToDataset(matching_files,dataset):
         if 'socialGridMap' in files and 'obstacleGridMap' in files:
             sgmFilename = files['socialGridMap']
             ogmFilename = files['obstacleGridMap']
-            pairs = loadFromTxt(sgmFilename, ogmFilename,False)
+            pairs = loadFromTxt(sgmFilename, ogmFilename)
             print(f"Pairs for files with number {file_number}:")
             loadIntoDataset(pairs,dataset)
 
-def loadConfig():
-        # Load configuration
-    try:
-        with open("ml_pipeline_package/config/pipelineConfig.yaml", "r") as f:
-            config = yaml.safe_load(f)
-            return config
-    except FileNotFoundError:
-        print("Error: Configuration file 'config.yaml' not found!")
-    # Handle the error or use default values
-
 def train():
-    model = load_model("/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/trained_modelsonecfg.pt")
+    model = load_model("/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/trained_models/bookstore/nodropoutFCNv2.pt")
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -248,66 +190,61 @@ def train():
     accuracy = torchmetrics.Accuracy(task="multiclass",num_classes=3)
     accuracy = accuracy.to(device)
 
+    per_class_accuracy = torchmetrics.classification.MulticlassAccuracy(num_classes=3, average=None).to(device)
+
     mse = torchmetrics.MeanSquaredError()
     mse = mse.to(device)
 
     mae = torchmetrics.MeanAbsoluteError()
     mae = mae.to(device)
 
-    iou = torchmetrics.JaccardIndex(task= "multiclass",num_classes=3)
+    iou = torchmetrics.classification.JaccardIndex(task= "multiclass",num_classes=3)
     iou = iou.to(device)
 
-    precision = torchmetrics.Precision(task= "multiclass",num_classes=3)
+    precision = torchmetrics.classification.Precision(task= "multiclass",num_classes=3,average=None)
     precision = precision.to(device)
 
-    f1 = torchmetrics.F1Score(task= "multiclass",num_classes=3)
+    f1 = torchmetrics.classification.F1Score(task= "multiclass",num_classes=3,average=None)
     f1 = f1.to(device)
 
-    recall = torchmetrics.Recall(task= "multiclass",num_classes=3)
+    recall = torchmetrics.classification.Recall(task= "multiclass",num_classes=3,average=None)
     recall = recall.to(device)
 
     confusion_matrix = torchmetrics.ConfusionMatrix(task="multiclass", num_classes=3).to(device)
     confusion_matrix = confusion_matrix.to(device)
 
-
-    matchingFiles = find_matching_files(file_path_input)
-
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-    model = SocialHeatMapCombined().to(device)
-
-    accuracy = torchmetrics.Accuracy(task="multiclass",num_classes=num_classes)
-    accuracy = accuracy.to(device)
-    
     criterion = nn.CrossEntropyLoss()
 
-    matchingFiles = find_matching_files(file_path_input)
+    matchingFiles = find_matching_files("/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/bookstore/eval/without_coords/final_maps")
 
     total_loss = 0.0
     num_samples = 0
 
+    newDataset = HMDataset()
+
     for file_number, files in matchingFiles.items():
-        plateau_count = 0
         if 'socialGridMap' in files and 'obstacleGridMap' in files:
-            newDataset = HMDataset()
             sgmFilename = files['socialGridMap']
             ogmFilename = files['obstacleGridMap']
             pairs = loadFromTxt(sgmFilename, ogmFilename,)
             print(f"file number: {file_number}")
             loadIntoDataset(pairs,newDataset)
 
-    newDataLoader = DataLoader(newDataset,batch_size=batch_size,shuffle=True)
+    newDataLoader = DataLoader(newDataset,batch_size=6,shuffle=True)
 
     stop = False
-
     with torch.no_grad():
         for inputs, labels in newDataLoader:
             inputs = inputs.to(device)
             labels = labels.to(device)
-            coord = coord.to(device)
+            #show_tensor_as_image(labels)
             # Forward pass
-            outputs = model(coord,inputs)
+            outputs = model(inputs)
+            #print("**************")
             pred_classes = torch.argmax(outputs, dim=1)
+
+            #show_tensor_as_image(pred_classes)
+            
             # Compute the loss
             loss = criterion(outputs, labels)
             print(loss.item())
@@ -321,6 +258,7 @@ def train():
             f1.update(pred_classes ,labels)
             recall.update(pred_classes ,labels)
             confusion_matrix.update(pred_classes , labels)
+            per_class_accuracy.update(outputs, labels)
 
     time.sleep(5)
 
@@ -332,6 +270,7 @@ def train():
     f1 = f1.compute()
     recall = recall.compute()
     confusion_matrix = confusion_matrix.compute()
+    class_accuracies = per_class_accuracy.compute()
 
     avg_loss = total_loss/num_samples
 
@@ -344,11 +283,29 @@ def train():
     print(f"f1: {f1}")
     print(f"recall: {recall}")
     print(f"Confusion Matrix:\n{confusion_matrix}")
+    print(f"Per class accuracy:{class_accuracies}")
 
-    time.sleep(2)
+def show_tensor_as_image(tensor, title='Image', cmap='viridis',index=0):
+    """Display a tensor as an image."""
+    # Ensure the tensor is on the CPU and converted to numpy
+    tensor = tensor.cpu().numpy()
+    tensor = tensor[0]
 
+    if tensor.ndim == 4:  # Batch dimension exists
+        tensor = tensor[index]
+    
+    # Remove singleton dimensions if any
+    if tensor.ndim > 2:
+        tensor = tensor.squeeze()
+
+    plt.imshow(tensor, cmap=cmap)
+    plt.colorbar()
+    plt.title(title)
+    plt.show()
 
 
 if __name__ == "__main__":
     torch.set_printoptions(threshold=float('inf'), precision=4, edgeitems=10)
     train()
+
+

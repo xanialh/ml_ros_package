@@ -5,17 +5,15 @@ from torch.utils.data import Dataset, DataLoader
 import numpy as np
 import csv
 import math
+import torchmetrics.classification
 import torchvision.transforms as transforms
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
 import os
 import yaml
-import torchmetrics 
+import torchmetrics
 import time
 import cv2
-import PIL
-
-import matplotlib.pyplot as plt
 
 class SocialHeatMapFCN(nn.Module):
     def __init__(self):
@@ -23,28 +21,21 @@ class SocialHeatMapFCN(nn.Module):
         
         # Encoder (feature extraction)
         self.encoder = nn.Sequential(
-            nn.Conv2d(in_channels=1, out_channels=64, kernel_size=3, padding=1), 
+            nn.Conv2d(in_channels=1, out_channels=64, kernel_size=3, padding=1),
             nn.ReLU(inplace=True),
             nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, padding=1),
             nn.ReLU(inplace=True),
-            nn.MaxPool2d(kernel_size=2, stride=2),
-            nn.Dropout(p=0.2),  # Add dropout with probability 0.5
-            nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, padding=1),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, padding=1),
-            nn.MaxPool2d(kernel_size=2, stride=2),
+            nn.MaxPool2d(kernel_size=2, stride=2)
         )
         
         # Decoder (upsampling)
         self.decoder = nn.Sequential(
-            nn.ConvTranspose2d(in_channels=128, out_channels=128, kernel_size=4, stride=2, padding=1),
+            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, padding=1),
             nn.ReLU(inplace=True),
-            nn.Conv2d(in_channels=128, out_channels=64, kernel_size=3, padding=1),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(in_channels=64, out_channels=32, kernel_size=3, padding=1),
-            nn.ReLU(inplace=True),
-            nn.ConvTranspose2d(in_channels=32, out_channels=3, kernel_size=4, stride=2, padding=1),
+            nn.Conv2d(in_channels=64, out_channels=3, kernel_size=3, padding=1),
+            nn.ConvTranspose2d(in_channels=3, out_channels=3, kernel_size=4, stride=2, padding=1)
         )
+
         
     def forward(self, x):
         # Forward pass through the encoder
@@ -52,9 +43,9 @@ class SocialHeatMapFCN(nn.Module):
         
         # Forward pass through the decoder
         x = self.decoder(x)
-
+        
         return x
-   
+    
 class HMDataset(Dataset):
     def __init__(self) -> None:
         self.data = []
@@ -210,14 +201,14 @@ def train():
 
     model = SocialHeatMapFCN().to(device)
 
-    accuracy = torchmetrics.Accuracy(task="multiclass",num_classes=3)
+    accuracy = torchmetrics.Accuracy(task="multiclass",num_classes=num_classes)
     accuracy = accuracy.to(device)
-    
+
         # Example confusion matrix
     confusion_matrix = np.array([
-        [4435014,  236474,   37364],
-        [ 464107,  101841,   13799],
-        [ 119221,   30298,   17754]
+        [14367893,      869,    53509],
+        [  336779,       31,     2548],
+        [   97568,        7,     1084]
     ])
 
     # Calculate class frequencies
@@ -307,7 +298,7 @@ def train():
 
     accuracy = accuracy.compute()
     print(f"Evaluation Accuracy: {accuracy}")
-    torch.save(model.state_dict(), file_path_output + "FCNv2loadeverythingweights+batch32.pt")
+    torch.save(model.state_dict(), file_path_output + "FCNv1.pt")
 
 def visualize_label_tensor(tensor, title='Label Tensor'):
     # Convert tensor to numpy array

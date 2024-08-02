@@ -30,27 +30,19 @@ class SocialHeatMapFCN(nn.Module):
         
         # Encoder (feature extraction)
         self.encoder = nn.Sequential(
-            nn.Conv2d(in_channels=1, out_channels=64, kernel_size=3, padding=1), 
+            nn.Conv2d(in_channels=1, out_channels=64, kernel_size=3, padding=1),
             nn.ReLU(inplace=True),
             nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, padding=1),
             nn.ReLU(inplace=True),
-            nn.MaxPool2d(kernel_size=2, stride=2),
-            nn.Dropout(p=0.2),  # Add dropout with probability 0.5
-            nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, padding=1),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, padding=1),
-            nn.MaxPool2d(kernel_size=2, stride=2),
+            nn.MaxPool2d(kernel_size=2, stride=2)
         )
         
         # Decoder (upsampling)
         self.decoder = nn.Sequential(
-            nn.ConvTranspose2d(in_channels=128, out_channels=128, kernel_size=4, stride=2, padding=1),
+            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, padding=1),
             nn.ReLU(inplace=True),
-            nn.Conv2d(in_channels=128, out_channels=64, kernel_size=3, padding=1),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(in_channels=64, out_channels=32, kernel_size=3, padding=1),
-            nn.ReLU(inplace=True),
-            nn.ConvTranspose2d(in_channels=32, out_channels=3, kernel_size=4, stride=2, padding=1),
+            nn.Conv2d(in_channels=64, out_channels=3, kernel_size=3, padding=1),
+            nn.ConvTranspose2d(in_channels=3, out_channels=3, kernel_size=4, stride=2, padding=1)
         )
         
     def forward(self, x):
@@ -182,7 +174,7 @@ def addFilesToDataset(matching_files,dataset):
             loadIntoDataset(pairs,dataset)
 
 def train():
-    model = load_model("/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/trained_models/bookstore/FCNv2loadeverythingweights.pt")
+    model = load_model("/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/trained_models/bookstore/FCNv1.pt")
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -191,24 +183,22 @@ def train():
     accuracy = torchmetrics.Accuracy(task="multiclass",num_classes=3)
     accuracy = accuracy.to(device)
 
-    per_class_accuracy = torchmetrics.classification.MulticlassAccuracy(num_classes=3, average=None).to(device)
-
     mse = torchmetrics.MeanSquaredError()
     mse = mse.to(device)
 
     mae = torchmetrics.MeanAbsoluteError()
     mae = mae.to(device)
 
-    iou = torchmetrics.classification.JaccardIndex(task= "multiclass",num_classes=3,average=None)
+    iou = torchmetrics.JaccardIndex(task= "multiclass",num_classes=3)
     iou = iou.to(device)
 
-    precision = torchmetrics.classification.Precision(task= "multiclass",num_classes=3,average=None)
+    precision = torchmetrics.Precision(task= "multiclass",num_classes=3)
     precision = precision.to(device)
 
-    f1 = torchmetrics.classification.F1Score(task= "multiclass",num_classes=3,average=None)
+    f1 = torchmetrics.F1Score(task= "multiclass",num_classes=3)
     f1 = f1.to(device)
 
-    recall = torchmetrics.classification.Recall(task= "multiclass",num_classes=3,average=None)
+    recall = torchmetrics.Recall(task= "multiclass",num_classes=3)
     recall = recall.to(device)
 
     confusion_matrix = torchmetrics.ConfusionMatrix(task="multiclass", num_classes=3).to(device)
@@ -231,21 +221,19 @@ def train():
             print(f"file number: {file_number}")
             loadIntoDataset(pairs,newDataset)
 
-    newDataLoader = DataLoader(newDataset,batch_size=6,shuffle=True)
+    newDataLoader = DataLoader(newDataset,batch_size=4,shuffle=True)
 
     stop = False
     with torch.no_grad():
         for inputs, labels in newDataLoader:
             inputs = inputs.to(device)
             labels = labels.to(device)
-            #show_tensor_as_image(labels)
             # Forward pass
             outputs = model(inputs)
+            print(outputs.size())
             #print("**************")
             pred_classes = torch.argmax(outputs, dim=1)
-
-            #show_tensor_as_image(pred_classes)
-            
+            print(labels.size())
             # Compute the loss
             loss = criterion(outputs, labels)
             print(loss.item())
@@ -259,7 +247,6 @@ def train():
             f1.update(pred_classes ,labels)
             recall.update(pred_classes ,labels)
             confusion_matrix.update(pred_classes , labels)
-            per_class_accuracy.update(outputs, labels)
 
     time.sleep(5)
 
@@ -271,7 +258,6 @@ def train():
     f1 = f1.compute()
     recall = recall.compute()
     confusion_matrix = confusion_matrix.compute()
-    class_accuracies = per_class_accuracy.compute()
 
     avg_loss = total_loss/num_samples
 
@@ -284,26 +270,6 @@ def train():
     print(f"f1: {f1}")
     print(f"recall: {recall}")
     print(f"Confusion Matrix:\n{confusion_matrix}")
-    print(f"Per class accuracy:{class_accuracies}")
-
-def show_tensor_as_image(tensor, title='Image', cmap='viridis',index=0):
-    """Display a tensor as an image."""
-    # Ensure the tensor is on the CPU and converted to numpy
-    tensor = tensor.cpu().numpy()
-    tensor = tensor[0]
-
-    if tensor.ndim == 4:  # Batch dimension exists
-        tensor = tensor[index]
-    
-    # Remove singleton dimensions if any
-    if tensor.ndim > 2:
-        tensor = tensor.squeeze()
-
-    plt.imshow(tensor, cmap=cmap)
-    plt.colorbar()
-    plt.title(title)
-    plt.show()
-
 
 if __name__ == "__main__":
     torch.set_printoptions(threshold=float('inf'), precision=4, edgeitems=10)
