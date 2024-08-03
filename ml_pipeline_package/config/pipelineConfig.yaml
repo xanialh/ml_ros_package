@@ -32,8 +32,10 @@ create_SDHM_coords:
 FCN:
   file_path_input: "/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/bookstore/final_maps/without_coords"
   file_path_output: "ml_pipeline_package/data/trained_models/bookstore/"
-  weighted: false
-  class_matrix: [[139707,436551,72687],[99559,2694048,489764],[30093,784657,708806]]
+  weighted: True
+  class_matrix: [[5065466,   67730,   14963],
+        [ 206475,   13469,    2245],
+        [  72070,    7748,    5706]]
   training_image_size: [128,128]
   batch_size: 64
   num_epochs: 100
@@ -42,17 +44,17 @@ FCN:
 CNN:
   file_path_input: "ml_pipeline_package/data/maps_with_coords/maps_SDHM_cropped/office"
   file_path_output: "ml_pipeline_package/data/trained_models/office"
-  weighted: 
-  class_matrix: [[3860989,  524777,  323086],
-        [ 377772,  148099,   53876],
-        [  99907,   36103,   31263]]
+  weighted: True
+  class_matrix: [[5019663,  106704,   21792],
+        [ 201025,   17706,    3458],
+        [  69430,    8066,    8028]]
   training_image_size: [128,128]
   batch_size: 6
   num_epochs: 2
   model_name: "CNN"
 
 eval_FCN:
-  model_location: "/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/trained_models/bookstore/100epochsfulaijFCN.pt"
+  model_location: "/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/trained_models/bookstore/100epochsfulaij2FCN.pt"
   eval_data_location: "/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/bookstore/eval/without_coords/final_maps"
   training_image_size: [128,128]
   batch_size: 64

@@ -13,6 +13,7 @@ import yaml
 import torchmetrics
 import time
 import cv2
+import copy
 
 class CNN(nn.Module):
     def __init__(self):
@@ -223,6 +224,9 @@ def train():
     accuracy = torchmetrics.Accuracy(task="multiclass",num_classes=3)
     accuracy = accuracy.to(device)
 
+    val_accuracy = torchmetrics.Accuracy(task="multiclass",num_classes=3)
+    val_accuracy = accuracy.to(device)
+
     if weighted:
             # Example confusion matrix
         confusion_matrix = np.array(class_matrix)
@@ -241,39 +245,97 @@ def train():
         criterion = nn.CrossEntropyLoss
 
     optimizer = optim.Adam(model.parameters())
-
     matching_files = find_matching_files(file_path_input)
 
-    new_dataset = HM_Dataset()
+    if len(matching_files) == 0:
+        raise FileNotFoundError("No files found")
+    
+    total_files = len(matching_files)
+    train_split = int(0.8 * total_files)
+    val_split = total_files - train_split
 
-    for file_number, files in matching_files.items():
+    train_files, val_files = list(matching_files.items())[:train_split], list(matching_files.items())[train_split:]
+
+    # Create separate datasets for training and validation
+    train_dataset = HM_Dataset()
+    val_dataset = HM_Dataset()
+    
+    for file_number, files in train_files:
         if 'socialGridMap' in files and 'obstacleGridMap' in files:
             sgmFilename = files['socialGridMap']
             ogmFilename = files['obstacleGridMap']
             pairs = load_from_txt(sgmFilename, ogmFilename,)
             print(f"file number: {file_number}")
-            load_into_dataset(pairs,new_dataset,training_image_size,lower_bound_threshold,upper_bound_threshold)
+            load_into_dataset(pairs,train_dataset,training_image_size)
 
-    new_dataLoader = DataLoader(new_dataset,batch_size=batch_size,shuffle=True)
+    for file_number, files in val_files:
+        if 'socialGridMap' in files and 'obstacleGridMap' in files:
+            sgmFilename = files['socialGridMap']
+            ogmFilename = files['obstacleGridMap']
+            pairs = load_from_txt(sgmFilename, ogmFilename,)
+            print(f"file number: {file_number}")
+            load_into_dataset(pairs,val_dataset,training_image_size)
+
+    train_dataLoader = DataLoader(train_dataset,batch_size=batch_size,shuffle=True)
+    val_dataLoader = DataLoader(val_dataset,batch_size=batch_size)
+
+    patience = config.get("patience", 5)  # Number of epochs to wait for improvement
+    best_loss = float('inf')  # Initial best loss (set to a high value)
+    best_model_wts = copy.deepcopy(model.state_dict())  # Best model weights
+    previous_val_loss = float('inf')  # Track previous validation loss
 
     for epoch in range(num_epochs):
     # Iterate over the dataset
-            for inputs, labels, coord in new_dataLoader:
+        print(f"Epoch {epoch+1}/{num_epochs}")
+        for inputs, labels, coord in train_dataLoader:
+            inputs = inputs.to(device)
+            labels = labels.to(device)
+            coord = coord.to(device)
+        # Forward pass
+            outputs = model(coord,inputs)
+        # Compute the loss
+            loss = criterion(outputs, labels)
+            print(loss.item())
+
+        # Backward pass and optimization
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+            accuracy.update(outputs,labels)
+          # Validation loop
+        val_loss = 0
+        val_accuracy = 0
+        with torch.no_grad():
+            for inputs, labels in val_dataLoader:
                 inputs = inputs.to(device)
                 labels = labels.to(device)
                 coord = coord.to(device)
             # Forward pass
                 outputs = model(coord,inputs)
-            # Compute the loss
-                loss = criterion(outputs, labels)
-                print(loss.item())
+                val_loss += criterion(outputs, labels).item()
 
-            # Backward pass and optimization
-                optimizer.zero_grad()
-                loss.backward()
-                optimizer.step()
+                val_accuracy += accuracy(outputs, labels).item()
 
-                accuracy.update(outputs,labels)
+        val_loss /= len(val_dataLoader)
+        val_accuracy /= len(val_dataLoader)
+        print(f'Validation Loss: {val_loss:.4f} Validation Accuracy: {val_accuracy:.4f}')
+
+        # Early Stopping Evaluation
+        if val_loss > previous_val_loss:
+            current_patience += 1
+        else:
+            current_patience = 0
+            best_loss = val_loss
+            best_model_wts = copy.deepcopy(model.state_dict())
+            print('Validation loss improved, saving model...')
+            torch.save(best_model_wts, file_path_output + model_name + "CNN.pt")
+
+        previous_val_loss = val_loss
+
+        if current_patience >= patience:
+            print(f'Early stopping triggered after {patience} epochs with no improvement')
+            break
                 
     time.sleep(1)
 

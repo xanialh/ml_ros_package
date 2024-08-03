@@ -216,8 +216,6 @@ def train():
         criterion = nn.CrossEntropyLoss()
 
     optimizer = optim.Adam(model.parameters())
-    
-    new_dataset = HM_Dataset()
 
     matching_files = find_matching_files(file_path_input)
 
@@ -257,7 +255,6 @@ def train():
     best_loss = float('inf')  # Initial best loss (set to a high value)
     best_model_wts = copy.deepcopy(model.state_dict())  # Best model weights
     previous_val_loss = float('inf')  # Track previous validation loss
-
 
     for epoch in range(num_epochs):
     # Iterate over the dataset
@@ -315,6 +312,7 @@ def train():
     time.sleep(1)
 
     print(f"Evaluation Accuracy: {accuracy}")
+    print(f"best loss:{best_loss}")
     torch.save(model.state_dict(), file_path_output + model_name + "FCN.pt")
 
 def show_tensor_as_image(tensor, title='Image', cmap='viridis',index=0):
