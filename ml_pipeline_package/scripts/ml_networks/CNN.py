@@ -91,9 +91,6 @@ class HM_Dataset(Dataset):
         self.coords = []
         self.transform = transform
 
-    def __len__(self):
-        return len(self.data)
-
     def __getitem__(self, index):
         sample = self.data[index]
         label = self.labels[index]
@@ -128,7 +125,9 @@ class HM_Dataset(Dataset):
         self.labels.append(labels_tensor)
         self.coords.append(coord_tensor)
 
-def social_map_to_labels(social_GridMap,low_bound,high_bound):
+def social_map_to_labels(social_GridMap):
+    low_bound = 0.33
+    high_bound = 0.66
 
     length = len(social_GridMap)
 
@@ -136,7 +135,7 @@ def social_map_to_labels(social_GridMap,low_bound,high_bound):
         value = float(social_GridMap[i])
         if value < low_bound or math.isnan(value):
             social_GridMap[i] = 0
-        elif value >= high_bound:
+        elif value > high_bound:
             social_GridMap[i] = 2
         else:
             social_GridMap[i] = 1
@@ -213,8 +212,6 @@ def train():
     training_image_size = config["training_image_size"]
     batch_size = config["batch_size"]
     num_epochs = config["num_epochs"]
-    lower_bound_threshold = config["lower_bound_threshold"]
-    upper_bound_threshold = config["upper_bound_threshold"]
     weighted = config["weighted"]
     class_matrix = config["class_matrix"]
     model_name = config["model_name"]

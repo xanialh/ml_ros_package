@@ -8,7 +8,7 @@ from std_msgs.msg import Bool
 from nav_msgs.msg import Odometry
 import yaml
 
-class ros_recorder:
+class Ros_recorder:
     def __init__(self,i,date_time_recording,folder_path,ogm_topic,sgm_topic,odom_topic):
         self.i = i
         self.ogm_topic = ogm_topic
@@ -39,7 +39,7 @@ class ros_recorder:
         # Extract data from the 'social' layer
         social_gridmap_data = None
         for layer, data in zip(layers_copy , msg.data):
-            if layer == 'social_gridmap':
+            if layer == 'social_heatmap':
                 social_gridmap_data = data
                 break
 
@@ -149,7 +149,7 @@ class dataCollector:
                     print("Maximum number of files reached")
                     break
                 print("New recorder made")
-                self.current_recorder = ros_recorder(self.i,timeLog,self.folder_path,self.ogm_topic,self.sgm_topic,self.odom_topic)
+                self.current_recorder = Ros_recorder(self.i,timeLog,self.folder_path,self.ogm_topic,self.sgm_topic,self.odom_topic)
                 self.current_recorder.record()
 
                 while self.recording_flag:
@@ -185,9 +185,9 @@ def main():
 # Load configuration
 
     folder_path = config["folder_path"]
-    ogm_topic = config["ogm_topic"]
-    sgm_topic = config["sgm_topic"]
-    odom_topic = config["odom_topic"]
+    ogm_topic = "/grid_map_visualization/obstacles"
+    sgm_topic = "/smf_move_base_mapper/social_grid_map"
+    odom_topic = "/pepper/odom_groundtruth"
     max_files = config["max_files"]
 
 #social grid map has 1 as first element

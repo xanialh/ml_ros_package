@@ -57,7 +57,7 @@ class Ros_recorder:
         # Extract data from the 'social' layer
         social_gridmap_data = None
         for layer, data in zip(layers_copy , msg.data):
-            if layer == 'social_gridmap':
+            if layer == 'social_heatmap':
                 social_gridmap_data = data
                 break
 
@@ -198,8 +198,8 @@ def main():
     config = config_full["record_maps"]
 
     folder_path = config["folder_path"]
-    ogm_topic = config["ogm_topic"]
-    sgm_topic = config["sgm_topic"]
+    ogm_topic = "/grid_map_visualization/obstacles"
+    sgm_topic = "/smf_move_base_mapper/social_grid_map"
     max_files = config["max_files"]
 
     #social grid map has 1 as first element

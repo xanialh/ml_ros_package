@@ -15,6 +15,7 @@ import time
 import cv2
 import PIL
 import matplotlib.pyplot as plt
+import copy
 
 class FCN(nn.Module):
     def __init__(self):
@@ -95,7 +96,9 @@ class HM_Dataset(Dataset):
     def getLabels(self):
         return self.labels
 
-def social_map_to_labels(social_GridMap,low_bound,high_bound):
+def social_map_to_labels(social_GridMap):
+    low_bound = 0.33
+    high_bound = 0.66
 
     length = len(social_GridMap)
 
@@ -103,7 +106,7 @@ def social_map_to_labels(social_GridMap,low_bound,high_bound):
         value = float(social_GridMap[i])
         if value < low_bound or math.isnan(value):
             social_GridMap[i] = 0
-        elif value >= high_bound:
+        elif value > high_bound:
             social_GridMap[i] = 2
         else:
             social_GridMap[i] = 1
@@ -127,7 +130,7 @@ def load_from_txt(sgm_filename,ogm_filename):
     
     return pairs
 
-def load_into_dataset(pairs,dataset,training_image_size,low_bound,high_bound):
+def load_into_dataset(pairs,dataset,training_image_size):
     for pair in pairs:
         sgm = pair[0]
         ogm = pair[1]
@@ -138,7 +141,7 @@ def load_into_dataset(pairs,dataset,training_image_size,low_bound,high_bound):
         column_index = int(float(sgm[3]))
 
         data = ogm[4:]
-        labels = social_map_to_labels(sgm[4:],low_bound,high_bound)
+        labels = social_map_to_labels(sgm[4:])
         dataset.add_data(data,labels,row_index,column_index,training_image_size)
 
 def show_array_as_image(array):
@@ -179,10 +182,9 @@ def train():
     training_image_size = config["training_image_size"]
     batch_size = config["batch_size"]
     num_epochs = config["num_epochs"]
-    lower_bound_threshold = config["lower_bound_threshold"]
-    upper_bound_threshold = config["upper_bound_threshold"]
     weighted = config["weighted"]
-    class_matrix = config["class_matrix"]
+    if weighted == True:
+        class_matrix = config["class_matrix"]
     model_name = config["model_name"]
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -191,6 +193,9 @@ def train():
 
     accuracy = torchmetrics.Accuracy(task="multiclass",num_classes=3)
     accuracy = accuracy.to(device)
+
+    val_accuracy = torchmetrics.Accuracy(task="multiclass",num_classes=3)
+    val_accuracy = accuracy.to(device)
 
     if weighted:
             # Example confusion matrix
@@ -211,46 +216,104 @@ def train():
         criterion = nn.CrossEntropyLoss()
 
     optimizer = optim.Adam(model.parameters())
-   
-    matchingFiles = find_matching_files(file_path_input)
     
-    if len(matchingFiles) == 0:
-        raise FileNotFoundError("No files found")
-
     new_dataset = HM_Dataset()
 
     matching_files = find_matching_files(file_path_input)
 
-    for file_number, files in matching_files.items():
+    if len(matching_files) == 0:
+        raise FileNotFoundError("No files found")
+    
+    total_files = len(matching_files)
+    train_split = int(0.8 * total_files)
+    val_split = total_files - train_split
+
+    train_files, val_files = list(matching_files.items())[:train_split], list(matching_files.items())[train_split:]
+
+    # Create separate datasets for training and validation
+    train_dataset = HM_Dataset()
+    val_dataset = HM_Dataset()
+    
+    for file_number, files in train_files:
         if 'socialGridMap' in files and 'obstacleGridMap' in files:
             sgmFilename = files['socialGridMap']
             ogmFilename = files['obstacleGridMap']
             pairs = load_from_txt(sgmFilename, ogmFilename,)
             print(f"file number: {file_number}")
-            load_into_dataset(pairs,new_dataset,training_image_size,lower_bound_threshold,upper_bound_threshold)
+            load_into_dataset(pairs,train_dataset,training_image_size)
 
-    new_dataLoader = DataLoader(new_dataset,batch_size=batch_size,shuffle=True)
+    for file_number, files in val_files:
+        if 'socialGridMap' in files and 'obstacleGridMap' in files:
+            sgmFilename = files['socialGridMap']
+            ogmFilename = files['obstacleGridMap']
+            pairs = load_from_txt(sgmFilename, ogmFilename,)
+            print(f"file number: {file_number}")
+            load_into_dataset(pairs,val_dataset,training_image_size)
+
+    train_dataLoader = DataLoader(train_dataset,batch_size=batch_size,shuffle=True)
+    val_dataLoader = DataLoader(val_dataset,batch_size=batch_size)
+
+    patience = config.get("patience", 5)  # Number of epochs to wait for improvement
+    best_loss = float('inf')  # Initial best loss (set to a high value)
+    best_model_wts = copy.deepcopy(model.state_dict())  # Best model weights
+    previous_val_loss = float('inf')  # Track previous validation loss
+
 
     for epoch in range(num_epochs):
     # Iterate over the dataset
-            for inputs, labels in new_dataLoader:
+        print(f"Epoch {epoch+1}/{num_epochs}")
+        for inputs, labels in train_dataLoader:
+            inputs = inputs.to(device)
+            labels = labels.to(device)
+        # Forward pass
+            outputs = model(inputs)
+        # Compute the loss
+            loss = criterion(outputs, labels)
+            print(loss.item())
+        # Backward pass and optimization
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+            accuracy.update(outputs,labels)
+        
+            # Print training loss
+
+        print(f'Training Loss: {loss.item():.4f}')
+
+         # Validation loop
+        val_loss = 0
+        val_accuracy = 0
+        with torch.no_grad():
+            for inputs, labels in val_dataLoader:
                 inputs = inputs.to(device)
                 labels = labels.to(device)
-            # Forward pass
                 outputs = model(inputs)
-            # Compute the loss
-                loss = criterion(outputs, labels)
-                print(loss.item())
-            # Backward pass and optimization
-                optimizer.zero_grad()
-                loss.backward()
-                optimizer.step()
+                val_loss += criterion(outputs, labels).item()
 
-                accuracy.update(outputs,labels)
+                val_accuracy += accuracy(outputs, labels).item()
 
+        val_loss /= len(val_dataLoader)
+        val_accuracy /= len(val_dataLoader)
+        print(f'Validation Loss: {val_loss:.4f} Validation Accuracy: {val_accuracy:.4f}')
+
+        # Early Stopping Evaluation
+        if val_loss > previous_val_loss:
+            current_patience += 1
+        else:
+            current_patience = 0
+            best_loss = val_loss
+            best_model_wts = copy.deepcopy(model.state_dict())
+            print('Validation loss improved, saving model...')
+            torch.save(best_model_wts, file_path_output + model_name + "FCN.pt")
+
+        previous_val_loss = val_loss
+
+        if current_patience >= patience:
+            print(f'Early stopping triggered after {patience} epochs with no improvement')
+            break
     time.sleep(1)
 
-    accuracy = accuracy.compute()
     print(f"Evaluation Accuracy: {accuracy}")
     torch.save(model.state_dict(), file_path_output + model_name + "FCN.pt")
 
