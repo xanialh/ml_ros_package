@@ -99,11 +99,11 @@ def load_from_txt(sgm_filename,ogm_filename):
             cropped_social_grid = reshape_final_social_grid[:height, :width]
 
             reshape_obstacleGridMap = np.ravel(reshape_obstacleGridMap)
-            ogm_front = np.array([0,ogm_header,largest_height,largest_width,x,y])
+            ogm_front = np.array([0,ogm_header,height,width,x,y])
             ogm = np.concatenate((ogm_front,reshape_obstacleGridMap))
             ogm_list = ogm.tolist()
 
-            sgm_front = np.array([1,ogm_header,largest_height,largest_width,largest_x,largest_y])
+            sgm_front = np.array([1,ogm_header,height,width,x,y])
             sgm = np.concatenate((sgm_front,cropped_social_grid.ravel()))
             sgm_list = sgm.tolist()
 
@@ -134,7 +134,7 @@ def add_files_to_dataset(matching_files, folder_path_output):
             ogm_filename_only = os.path.basename(ogm_filename)
 
             print(f"Pairs for files with number {file_number}:")
-            pairs = load_from_txt(sgm_filename, ogm_filename,"average")
+            pairs = load_from_txt(sgm_filename, ogm_filename)
             # Create folder path with variable
             folder_path = os.path.join(folder_path_output, "")  # Ensure trailing slash
 
@@ -178,7 +178,7 @@ def load_config():
 def main():
     config_full = load_config()
     config = config_full["create_SDHM_coords"]
-    folderPathInput = config["folderPathInput"]
+    folderPathInput = config["folder_path_input"]
     folder_path_output = config["folder_path_output"]
     social_heat_density_create(folderPathInput,folder_path_output)
     

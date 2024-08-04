@@ -14,6 +14,12 @@ import torchmetrics
 import time
 import cv2
 
+def load_model(model_path):
+  model = CNN()
+  model.load_state_dict(torch.load(model_path))
+  model.eval()  # Set the model to evaluation mode
+  return model
+
 class CNN(nn.Module):
     def __init__(self):
         super(CNN, self).__init__()
@@ -44,11 +50,12 @@ class CNN(nn.Module):
             nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, padding=1),
             nn.ReLU(inplace=True),
             nn.MaxPool2d(kernel_size=2, stride=2),
+            nn.Dropout(p=0.2),
             nn.Conv2d(in_channels=64, out_channels=128, kernel_size=3, padding=1),
             nn.ReLU(inplace=True),
             nn.Conv2d(in_channels=128, out_channels=128, kernel_size=3, padding=1),
             nn.MaxPool2d(kernel_size=2, stride=2),
-            nn.Dropout(p=0.2)  # Add dropout with probability 0.5
+            nn.Dropout(p=0.2)
         )
         
         # Decoder (upsampling)
@@ -127,7 +134,9 @@ class HM_Dataset(Dataset):
         self.labels.append(labels_tensor)
         self.coords.append(coord_tensor)
 
-def social_map_to_labels(social_GridMap,low_bound,high_bound):
+def social_map_to_labels(social_GridMap):
+    low_bound = 0.33
+    high_bound = 0.66
 
     length = len(social_GridMap)
 
@@ -135,7 +144,7 @@ def social_map_to_labels(social_GridMap,low_bound,high_bound):
         value = float(social_GridMap[i])
         if value < low_bound or math.isnan(value):
             social_GridMap[i] = 0
-        elif value >= high_bound:
+        elif value > high_bound:
             social_GridMap[i] = 2
         else:
             social_GridMap[i] = 1
@@ -159,7 +168,7 @@ def load_from_txt(sgm_filename,ogm_filename):
     
     return pairs
 
-def load_into_dataset(pairs,dataset,training_image_size,low_bound,high_bound):
+def load_into_dataset(pairs,dataset,training_image_size):
     for pair in pairs:
         sgm = pair[0]
         ogm = pair[1]
@@ -170,7 +179,7 @@ def load_into_dataset(pairs,dataset,training_image_size,low_bound,high_bound):
         column_index = int(float(sgm[3]))
 
         data = ogm[6:]
-        labels = social_map_to_labels(sgm[6:],low_bound,high_bound)
+        labels = social_map_to_labels(sgm[6:])
         coords = [ogm[4],ogm[5]]
 
         dataset.add_data(data,labels,row_index,column_index,coords,training_image_size)
@@ -184,20 +193,14 @@ def find_matching_files(folder_path):
     matching_files = {}
     for file in os.listdir(folder_path):
         split_file = file.split("_")
-        if len(split_file) == 4 and split_file[3].endswith(".txt"):
+        if len(split_file) == 5 and split_file[4].endswith(".txt"):
             file_number = split_file[0]
-            map_type = split_file[3].split(".")[0]
+            map_type = split_file[4].split(".")[0]
             if map_type in ["socialGridMap", "obstacleGridMap"]:
                 if file_number not in matching_files:
                     matching_files[file_number] = {}
                 matching_files[file_number][map_type] = os.path.join(folder_path, file)
     return matching_files
-
-def load_model(model_path):
-  model = CNN()
-  model.load_state_dict(torch.load(model_path))
-  model.eval()  # Set the model to evaluation mode
-  return model
 
 def load_config():
         # Load configuration
@@ -212,14 +215,12 @@ def load_config():
 
 def train():
     config_full = load_config()
-    config = config_full["eval_FCN"]
+    config = config_full["eval_CNN"]
 
     model_location = config["model_location"]
     file_path_input = config["eval_data_location"]
     training_image_size = config["training_image_size"]
     batch_size = config["batch_size"]
-    lower_bound_threshold = config["lower_bound_threshold"]
-    upper_bound_threshold = config["upper_bound_threshold"]
     
     model = load_model(model_location)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -269,16 +270,17 @@ def train():
             ogmFilename = files['obstacleGridMap']
             pairs = load_from_txt(sgmFilename, ogmFilename)
             print(f"file number: {file_number}")
-            load_into_dataset(pairs,new_dataset,training_image_size,lower_bound_threshold,upper_bound_threshold)
+            load_into_dataset(pairs,new_dataset,training_image_size)
 
     new_dataLoader = DataLoader(new_dataset,batch_size=batch_size,shuffle=True)
 
     with torch.no_grad():
-        for inputs, labels in new_dataLoader:
+        for inputs, labels, coord in new_dataLoader:
             inputs = inputs.to(device)
             labels = labels.to(device)
+            coord = coord.to(device)
             # Forward pass
-            outputs = model(inputs)
+            outputs = model(coord,inputs)
             #print("**************")
             pred_classes = torch.argmax(outputs, dim=1)
     

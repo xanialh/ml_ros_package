@@ -18,16 +18,16 @@ record_maps_coords:
   max_files: 30
 
 split_maps:
-  directory_path_input: "/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/bookstore/raw_maps/without_coords"
-  directory_path_output: "/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/bookstore/split_maps/without_coords"
+  directory_path_input: "/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/bookstore/raw_maps/with_coords"
+  directory_path_output: "/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/bookstore/split_maps/with_coords"
 
 create_SDHM:
   folderPathInput: "/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/bookstore/split_maps/without_coords"
   folderPathOutput: "/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/bookstore/final_maps/without_coords"
 
 create_SDHM_coords:
-  folderPathInput: "/home/danielhixson/socNavProject/ml_ros_package/ml_pipeline_package/data/office/eval/without_coords/split_maps"
-  folderPathOutput: "/home/danielhixson/socNavProject/ml_ros_package/ml_pipeline_package/data/office/eval/without_coords/cropped_maps"
+  folder_path_input: "/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/bookstore/eval/with_coords/split_maps"
+  folder_path_output: "/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/bookstore/eval/with_coords/final_maps"
 
 FCN:
   file_path_input: "/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/bookstore/final_maps/without_coords"
@@ -42,16 +42,16 @@ FCN:
   model_name: "100epochs_64batch_Unweighted_Bookstore"
 
 CNN:
-  file_path_input: "ml_pipeline_package/data/maps_with_coords/maps_SDHM_cropped/office"
-  file_path_output: "ml_pipeline_package/data/trained_models/office"
-  weighted: True
+  file_path_input: "/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/bookstore/final_maps/with_coords"
+  file_path_output: "ml_pipeline_package/data/trained_models/bookstore"
+  weighted: False
   class_matrix: [[5019663,  106704,   21792],
         [ 201025,   17706,    3458],
         [  69430,    8066,    8028]]
   training_image_size: [128,128]
   batch_size: 64
-  num_epochs: 2
-  model_name: "CNN"
+  num_epochs: 100
+  model_name: "100epochs_64batch_Unweighted_Bookstore"
 
 eval_FCN:
   model_location: "/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/trained_models/bookstore/100epochs_64batch_Unweighted_Bookstore_FCN.pt"
@@ -60,10 +60,10 @@ eval_FCN:
   batch_size: 16
 
 eval_CNN:
-  model_location: "/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/trained_models/bookstore/noweights.pt"
-  eval_data_location: "/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/bookstore/final_maps/without_coords"
+  model_location: "/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/trained_models/bookstore100epochs_64batch_Unweighted_Bookstore_CNN.pt"
+  eval_data_location: "/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/bookstore/eval/with_coords/final_maps"
   training_image_size: [128,128]
-  batch_size: 4
+  batch_size: 64
 
 
 

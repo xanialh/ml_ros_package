@@ -92,6 +92,9 @@ class HM_Dataset(Dataset):
         self.coords = []
         self.transform = transform
 
+    def __len__(self):
+        return len(self.data)
+
     def __getitem__(self, index):
         sample = self.data[index]
         label = self.labels[index]
@@ -100,6 +103,12 @@ class HM_Dataset(Dataset):
         label = label.long()
 
         return sample, label, coords
+    
+    def getData(self):
+        return self.data
+    
+    def getLabels(self):
+        return self.labels
 
     def add_data(self,data,labels,row_index,column_index,coord,training_image_size):
         data = np.array(data)
@@ -160,7 +169,7 @@ def load_from_txt(sgm_filename,ogm_filename):
     
     return pairs
 
-def load_into_dataset(pairs,dataset,training_image_size,low_bound,high_bound):
+def load_into_dataset(pairs,dataset,training_image_size):
     for pair in pairs:
         sgm = pair[0]
         ogm = pair[1]
@@ -171,7 +180,7 @@ def load_into_dataset(pairs,dataset,training_image_size,low_bound,high_bound):
         column_index = int(float(sgm[3]))
 
         data = ogm[6:]
-        labels = social_map_to_labels(sgm[6:],low_bound,high_bound)
+        labels = social_map_to_labels(sgm[6:])
         coords = [ogm[4],ogm[5]]
 
         dataset.add_data(data,labels,row_index,column_index,coords,training_image_size)
@@ -233,7 +242,6 @@ def train():
         # Calculate class frequencies
         total_samples_per_class = confusion_matrix.sum(axis=1)
         weights = total_samples_per_class.sum() / (len(total_samples_per_class) * total_samples_per_class)
-        print(weights)
         misclassification_rate = confusion_matrix.sum(axis=1) - np.diag(confusion_matrix)
         weights = weights * (1 + misclassification_rate / total_samples_per_class)
         weights = weights / weights.sum()
@@ -242,7 +250,7 @@ def train():
 
         criterion = nn.CrossEntropyLoss(weight=weights_tensor)
     else:
-        criterion = nn.CrossEntropyLoss
+        criterion = nn.CrossEntropyLoss()
 
     optimizer = optim.Adam(model.parameters())
     matching_files = find_matching_files(file_path_input)
@@ -258,7 +266,6 @@ def train():
 
     # Create separate datasets for training and validation
     train_dataset = HM_Dataset()
-    val_dataset = HM_Dataset()
     
     for file_number, files in train_files:
         if 'socialGridMap' in files and 'obstacleGridMap' in files:
@@ -268,21 +275,7 @@ def train():
             print(f"file number: {file_number}")
             load_into_dataset(pairs,train_dataset,training_image_size)
 
-    for file_number, files in val_files:
-        if 'socialGridMap' in files and 'obstacleGridMap' in files:
-            sgmFilename = files['socialGridMap']
-            ogmFilename = files['obstacleGridMap']
-            pairs = load_from_txt(sgmFilename, ogmFilename,)
-            print(f"file number: {file_number}")
-            load_into_dataset(pairs,val_dataset,training_image_size)
-
     train_dataLoader = DataLoader(train_dataset,batch_size=batch_size,shuffle=True)
-    val_dataLoader = DataLoader(val_dataset,batch_size=batch_size)
-
-    patience = config.get("patience", 5)  # Number of epochs to wait for improvement
-    best_loss = float('inf')  # Initial best loss (set to a high value)
-    best_model_wts = copy.deepcopy(model.state_dict())  # Best model weights
-    previous_val_loss = float('inf')  # Track previous validation loss
 
     for epoch in range(num_epochs):
     # Iterate over the dataset
@@ -303,45 +296,12 @@ def train():
             optimizer.step()
 
             accuracy.update(outputs,labels)
-          # Validation loop
-        val_loss = 0
-        val_accuracy = 0
-        with torch.no_grad():
-            for inputs, labels in val_dataLoader:
-                inputs = inputs.to(device)
-                labels = labels.to(device)
-                coord = coord.to(device)
-            # Forward pass
-                outputs = model(coord,inputs)
-                val_loss += criterion(outputs, labels).item()
 
-                val_accuracy += accuracy(outputs, labels).item()
-
-        val_loss /= len(val_dataLoader)
-        val_accuracy /= len(val_dataLoader)
-        print(f'Validation Loss: {val_loss:.4f} Validation Accuracy: {val_accuracy:.4f}')
-
-        # Early Stopping Evaluation
-        if val_loss > previous_val_loss:
-            current_patience += 1
-        else:
-            current_patience = 0
-            best_loss = val_loss
-            best_model_wts = copy.deepcopy(model.state_dict())
-            print('Validation loss improved, saving model...')
-            torch.save(best_model_wts, file_path_output + model_name + "_CNN.pt")
-
-        previous_val_loss = val_loss
-
-        if current_patience >= patience:
-            print(f'Early stopping triggered after {patience} epochs with no improvement')
-            break
-                
     time.sleep(1)
 
     accuracy = accuracy.compute()
     print(f"Evaluation Accuracy: {accuracy}")
-    torch.save(model.state_dict(), "CNN" + file_path_output + model_name)
+    torch.save(model.state_dict(), file_path_output + model_name + "_CNN.pt")
 
 def visualize_label_tensor(tensor, title='Label Tensor'):
     # Convert tensor to numpy array
