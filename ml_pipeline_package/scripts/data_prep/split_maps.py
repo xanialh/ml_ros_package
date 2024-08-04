@@ -46,7 +46,6 @@ def split():
                             elif value == 0:
                                 OGMFile.write(line)
                         except (ValueError, IndexError):
-                            # Handle errors gracefully
                             pass
 
     SGMFile.close()
