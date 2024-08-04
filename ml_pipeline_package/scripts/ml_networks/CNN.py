@@ -329,7 +329,7 @@ def train():
             best_loss = val_loss
             best_model_wts = copy.deepcopy(model.state_dict())
             print('Validation loss improved, saving model...')
-            torch.save(best_model_wts, file_path_output + model_name + "CNN.pt")
+            torch.save(best_model_wts, file_path_output + model_name + "_CNN.pt")
 
         previous_val_loss = val_loss
 

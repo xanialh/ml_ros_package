@@ -275,45 +275,11 @@ def train():
             accuracy.update(outputs,labels)
         
             # Print training loss
-
-        print(f'Training Loss: {loss.item():.4f}')
-
-         # Validation loop
-        val_loss = 0
-        val_accuracy = 0
-        with torch.no_grad():
-            for inputs, labels in val_dataLoader:
-                inputs = inputs.to(device)
-                labels = labels.to(device)
-                outputs = model(inputs)
-                val_loss += criterion(outputs, labels).item()
-
-                val_accuracy += accuracy(outputs, labels).item()
-
-        val_loss /= len(val_dataLoader)
-        val_accuracy /= len(val_dataLoader)
-        print(f'Validation Loss: {val_loss:.4f} Validation Accuracy: {val_accuracy:.4f}')
-
-        # Early Stopping Evaluation
-        if val_loss > previous_val_loss:
-            current_patience += 1
-        else:
-            current_patience = 0
-            best_loss = val_loss
-            best_model_wts = copy.deepcopy(model.state_dict())
-            print('Validation loss improved, saving model...')
-            torch.save(best_model_wts, file_path_output + model_name + "FCN.pt")
-
-        previous_val_loss = val_loss
-
-        if current_patience >= patience:
-            print(f'Early stopping triggered after {patience} epochs with no improvement')
-            break
     time.sleep(1)
 
     print(f"Evaluation Accuracy: {accuracy}")
     print(f"best loss:{best_loss}")
-    torch.save(model.state_dict(), file_path_output + model_name + "FCN.pt")
+    torch.save(model.state_dict(), file_path_output + model_name + "_FCN.pt")
 
 def show_tensor_as_image(tensor, title='Image', cmap='viridis',index=0):
     """Display a tensor as an image."""
