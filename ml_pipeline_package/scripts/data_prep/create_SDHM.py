@@ -129,7 +129,7 @@ def add_files_to_dataset(matching_files, folder_path_output):
             ogm_filename_only = os.path.basename(ogm_filename)
 
             print(f"Pairs for files with number {file_number}:")
-            pairs = load_from_txt(sgm_filename, ogm_filename,"average")
+            pairs = load_from_txt(sgm_filename, ogm_filename)
             # Create folder path with variable
             folder_path = os.path.join(folder_path_output, "")  # Ensure trailing slash
 
@@ -158,6 +158,7 @@ def add_files_to_dataset(matching_files, folder_path_output):
         
 def social_heat_density_create(folder_path_input,folder_path_output):
     matching_pairs = find_matching_files(folder_path_input)
+    print(len(matching_pairs))
     add_files_to_dataset(matching_pairs,folder_path_output)
 
 def load_config():

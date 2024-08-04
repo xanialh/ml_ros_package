@@ -18,52 +18,53 @@ record_maps_coords:
   max_files: 30
 
 split_maps:
-  directory_path_input: "/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/bookstore/raw_maps/with_coords"
-  directory_path_output: "/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/bookstore/split_maps/with_coords"
+  directory_path_input: /home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/office/raw_maps/with_coords
+  directory_path_output: /home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/office/split_maps/with_coords
 
 create_SDHM:
-  folderPathInput: "/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/bookstore/split_maps/without_coords"
-  folderPathOutput: "/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/bookstore/final_maps/without_coords"
+  folder_path_input: /home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/office/split_maps/without_coords
+  folder_path_output: /home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/office/final_maps/without_coords
 
 create_SDHM_coords:
-  folder_path_input: "/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/bookstore/eval/with_coords/split_maps"
-  folder_path_output: "/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/bookstore/eval/with_coords/final_maps"
+  folder_path_input: /home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/office/split_maps/with_coords
+  folder_path_output: /home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/office/final_maps/with_coords
 
 FCN:
-  file_path_input: "/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/bookstore/final_maps/without_coords"
-  file_path_output: "ml_pipeline_package/data/trained_models/bookstore/"
+  file_path_input: "/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/office/final_maps/without_coords"
+  file_path_output: "ml_pipeline_package/data/trained_models/office/"
   weighted: False
-  class_matrix: [[5065466,   67730,   14963],
-        [ 206475,   13469,    2245],
-        [  72070,    7748,    5706]]
+  class_matrix: [[5011132,  111598,   25429],
+        [ 202930,   16651,    2608],
+        [  71899,    7163,    6462]]
   training_image_size: [128,128]
-  batch_size: 64
+  batch_size: 32
   num_epochs: 100
-  model_name: "100epochs_64batch_Unweighted_Bookstore"
+  model_name: "100epochs_32batch_unweighted_Office"
 
 CNN:
-  file_path_input: "/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/bookstore/final_maps/with_coords"
-  file_path_output: "ml_pipeline_package/data/trained_models/bookstore"
+  file_path_input: "/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/office/final_maps/with_coords"
+  file_path_output: "ml_pipeline_package/data/trained_models/office/"
   weighted: False
-  class_matrix: [[5019663,  106704,   21792],
-        [ 201025,   17706,    3458],
-        [  69430,    8066,    8028]]
+  class_matrix: [[5011132,  111598,   25429],
+        [ 202930,   16651,    2608],
+        [  71899,    7163,    6462]]
   training_image_size: [128,128]
-  batch_size: 64
+  batch_size: 32
   num_epochs: 100
-  model_name: "100epochs_64batch_Unweighted_Bookstore"
+  model_name: "100epochs_32batch_unweighted_Office"
+
 
 eval_FCN:
-  model_location: "/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/trained_models/bookstore/100epochs_64batch_Unweighted_Bookstore_FCN.pt"
-  eval_data_location: "/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/bookstore/eval/without_coords/final_maps"
+  model_location: "/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/trained_models/office/100epochs_32batch_unweighted_Office_FCN.pt"
+  eval_data_location: "/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/office/eval/without_coords/final_maps"
   training_image_size: [128,128]
-  batch_size: 16
+  batch_size: 32
 
 eval_CNN:
-  model_location: "/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/trained_models/bookstore100epochs_64batch_Unweighted_Bookstore_CNN.pt"
-  eval_data_location: "/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/bookstore/eval/with_coords/final_maps"
+  model_location: "/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/trained_models/bookstore/100epochs_32batch_weighted_Bookstore_CNN.pt"
+  eval_data_location: "/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/office/eval/with_coords/final_maps"
   training_image_size: [128,128]
-  batch_size: 64
+  batch_size: 32
 
 
 

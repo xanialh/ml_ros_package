@@ -312,6 +312,8 @@ def train():
     class_accuracies = per_class_accuracy.compute()
 
     avg_loss = total_loss/num_samples
+    print("-----------------------------------------------------------------------------------------------------")
+    print(f"Model name: {model_location}")
 
     print(f"Evaluation Accuracy: {accuracy}")
     print(f"Per class accuracy:{class_accuracies}")
