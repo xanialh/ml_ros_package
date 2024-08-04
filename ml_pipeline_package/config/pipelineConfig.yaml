@@ -33,9 +33,9 @@ FCN:
   file_path_input: "/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/office/final_maps/without_coords"
   file_path_output: "ml_pipeline_package/data/trained_models/office/"
   weighted: False
-  class_matrix: [[5011132,  111598,   25429],
-        [ 202930,   16651,    2608],
-        [  71899,    7163,    6462]]
+  class_matrix: [[8164651,   17897,    5185],
+        [  91246,     322,      51],
+        [  27271,      65,       0]]
   training_image_size: [128,128]
   batch_size: 32
   num_epochs: 100
