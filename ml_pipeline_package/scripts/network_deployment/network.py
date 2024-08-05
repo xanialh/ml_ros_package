@@ -77,7 +77,6 @@ data
 
 rospy.init_node("mlNetwork")
 ogmSub = rospy.Subscriber(ogm_topic, OccupancyGrid, o_gridmap_callback,callback_args=model)
-
 sgmPub = rospy.Publisher("/ml_sgm",OccupancyGrid,queue_size=10)
 
 rospy.spin()
