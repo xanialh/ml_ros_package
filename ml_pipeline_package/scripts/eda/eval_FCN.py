@@ -168,7 +168,7 @@ def find_matching_files(folder_path):
 def load_config():
         # Load configuration
     try:
-        with open("ml_pipeline_package/config/pipelineConfig.yaml", "r") as f:
+        with open("/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/config/pipelineConfig.yaml", "r") as f:
             config = yaml.safe_load(f)
             return config
     except FileNotFoundError:
@@ -235,15 +235,19 @@ def train():
             load_into_dataset(pairs,new_dataset,training_image_size)
 
     new_dataLoader = DataLoader(new_dataset,batch_size=batch_size,shuffle=True)
-
+     
     with torch.no_grad():
         for inputs, labels in new_dataLoader:
             inputs = inputs.to(device)
+            show_tensor_as_image(inputs)
             labels = labels.to(device)
+            show_tensor_as_image(labels)
             # Forward pass
             outputs = model(inputs)
+
             #print("**************")
             pred_classes = torch.argmax(outputs, dim=1)
+            show_tensor_as_image(pred_classes)
     
             # Compute the loss
             loss = criterion(outputs, labels)

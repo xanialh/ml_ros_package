@@ -55,8 +55,8 @@ CNN:
 
 
 eval_FCN:
-  model_location: /home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/trained_models/small_warehouse/100epochs_32batch_weighted_small_warehouse_FCN.pt
-  eval_data_location: "/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/small_warehouse/eval/without_coords/final_maps"
+  model_location: /home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/trained_models/office/100epochs_32batch_unweighted_Office_FCN.pt
+  eval_data_location: "/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/office/eval/without_coords/final_maps"
   training_image_size: [128,128]
   batch_size: 32
 
@@ -65,6 +65,12 @@ eval_CNN:
   eval_data_location: "/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/data/small_warehouse/eval/with_coords/final_maps"
   training_image_size: [128,128]
   batch_size: 32
+
+network_deploy:
+  folder_path:
+  model_path:
+  ogm_topic:
+  sgm_topic: 
 
 
 

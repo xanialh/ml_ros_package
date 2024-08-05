@@ -2,7 +2,7 @@ import os
 import csv
 import yaml
 
-def loadConfig():
+def load_config():
     # Load configuration
     try:
         with open("/home/xanial/FINAL_YEAR_PROJECT/ml_ros_package/ml_pipeline_package/config/pipelineConfig.yaml", "r") as f:
@@ -13,13 +13,11 @@ def loadConfig():
     # Handle the error or use default values
 
 def split():
-    configFull = loadConfig()
-    config = configFull["split_maps"]
+    config_full = load_config()
+    config = config_full["split_maps"]
 
     directory_path_input = config["directory_path_input"]
     directory_path_output = config["directory_path_output"]
-
-    txt_file_count = 0
 
     socialGridMap = "_socialGridMap.txt"
     obstacleGridMap = "_obstacleGridMap.txt"
@@ -28,11 +26,11 @@ def split():
         if filename.endswith(".txt"):
             currentFilePath = os.path.join(directory_path_input, filename)
 
-            newSGMFile = filename.replace(".txt",socialGridMap )
-            newOGMFile = filename.replace(".txt",obstacleGridMap)
+            new_SGM_file = filename.replace(".txt",socialGridMap )
+            new_OGM_file = filename.replace(".txt",obstacleGridMap)
 
-            outputFilePath_SGM = os.path.join(directory_path_output, newSGMFile)
-            outputFilePath_OGM = os.path.join(directory_path_output, newOGMFile)
+            outputFilePath_SGM = os.path.join(directory_path_output, new_SGM_file)
+            outputFilePath_OGM = os.path.join(directory_path_output, new_OGM_file)
 
             with open(outputFilePath_SGM,"w") as SGMFile, open(outputFilePath_OGM,"w") as OGMFile:
                 with open(currentFilePath,"r") as readFile:
