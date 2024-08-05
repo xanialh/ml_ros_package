@@ -64,7 +64,7 @@ data
 
     output = torch.argmax(output, dim=1)
 
-    np_low = np.array(np_low)
+    np_low = np.array(output)
 
     low_msg = OccupancyGrid()
 
@@ -74,7 +74,6 @@ data
     low_msg.data = np_low.tolist()
 
     sgmPub.publish(low_msg)
-
 
 rospy.init_node("mlNetwork")
 ogmSub = rospy.Subscriber(ogm_topic, OccupancyGrid, o_gridmap_callback,callback_args=model)
