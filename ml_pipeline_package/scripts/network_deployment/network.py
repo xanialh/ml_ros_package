@@ -24,6 +24,7 @@ folder_path = config["folder_path"]
 ogm_topic = config["ogm_topic"]
 sgm_topic = config["sgm_topic"]
 model_path = config["model_path"]
+training_img_size = config["training_img_size"]
 
 model = FCN.FCN()
 
@@ -57,7 +58,7 @@ data
     numpy_array = np.array(data,dtype=np.float32)
     numpy_array = numpy_array.reshape(row_index,column_index)
     # Resize to 128x128 using OpenCV (adjust interpolation method if needed)
-    resized_array = cv2.resize(numpy_array, (128, 128), interpolation=cv2.INTER_AREA)
+    resized_array = cv2.resize(numpy_array, tuple(training_img_size), interpolation=cv2.INTER_AREA)
     image_tensor = torch.from_numpy(resized_array)
 
     output = model(image_tensor.unsqueeze(0))

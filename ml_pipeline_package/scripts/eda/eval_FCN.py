@@ -239,7 +239,6 @@ def train():
     with torch.no_grad():
         for inputs, labels in new_dataLoader:
             inputs = inputs.to(device)
-            show_tensor_as_image(inputs)
             labels = labels.to(device)
             show_tensor_as_image(labels)
             # Forward pass
