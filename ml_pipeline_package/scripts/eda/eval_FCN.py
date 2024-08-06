@@ -240,13 +240,11 @@ def train():
         for inputs, labels in new_dataLoader:
             inputs = inputs.to(device)
             labels = labels.to(device)
-            show_tensor_as_image(labels)
             # Forward pass
             outputs = model(inputs)
 
             #print("**************")
             pred_classes = torch.argmax(outputs, dim=1)
-            show_tensor_as_image(pred_classes)
     
             # Compute the loss
             loss = criterion(outputs, labels)
